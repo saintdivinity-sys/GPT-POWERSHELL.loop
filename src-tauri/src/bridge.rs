@@ -201,6 +201,35 @@ fn spawn_powershell(script: &str) -> Result<tokio::process::Child, String> {
     }
 }
 
+fn clean_powershell_stdout(raw: &str) -> String {
+    let normalized = raw.replace("\r\n", "\n").replace('\r', "\n");
+    let mut cleaned = Vec::new();
+
+    for line in normalized.lines() {
+        let trimmed = line.trim();
+
+        if trimmed == "Windows PowerShell"
+            || trimmed.starts_with("Copyright (C) Microsoft Corporation. All rights reserved.")
+            || trimmed.starts_with("Install the latest PowerShell for new features and improvements!")
+        {
+            continue;
+        }
+
+        if trimmed.starts_with("PS ") {
+            if let Some((_, remainder)) = line.split_once("> ") {
+                if !remainder.trim().is_empty() {
+                    cleaned.push(remainder.to_string());
+                }
+                continue;
+            }
+        }
+
+        cleaned.push(line.to_string());
+    }
+
+    cleaned.join("\n").trim().to_string()
+}
+
 async fn run_powershell(command: &str, timeout_seconds: u64) -> Result<ServerMessage, String> {
     let cycle_id = Uuid::new_v4().to_string();
     let started = Utc::now();
@@ -221,11 +250,12 @@ async fn run_powershell(command: &str, timeout_seconds: u64) -> Result<ServerMes
 
     let finished = Utc::now();
     let exit_code = output.status.code().unwrap_or(-1);
+    let stdout_raw = String::from_utf8_lossy(&output.stdout).to_string();
 
     Ok(ServerMessage::CommandResult {
         cycle_id,
         exit_code,
-        stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+        stdout: clean_powershell_stdout(&stdout_raw),
         stderr: String::from_utf8_lossy(&output.stderr).to_string(),
         started_at: started.to_rfc3339(),
         finished_at: finished.to_rfc3339(),
