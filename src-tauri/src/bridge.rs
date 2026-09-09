@@ -4,6 +4,7 @@ use futures_util::{stream::SplitSink, SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, process::Stdio, sync::Arc, time::Duration};
 use tokio::{
+    io::AsyncWriteExt,
     net::{TcpListener, TcpStream},
     process::Command,
     sync::Mutex,
