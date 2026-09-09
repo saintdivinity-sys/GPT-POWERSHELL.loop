@@ -2,6 +2,7 @@ const PORT = 47177;
 let socket = null;
 let reconnectTimer = null;
 let pingTimer = null;
+const pendingTabIds = [];
 
 function startPing() {
   clearInterval(pingTimer);
@@ -33,14 +34,25 @@ function connect() {
     }
 
     if (payload.type === "command_result") {
-      const tabs = await chrome.tabs.query({ url: "https://chatgpt.com/*" });
-      const tab = tabs.find((candidate) => candidate.active) || tabs[0];
-      if (!tab?.id) return;
+      const tabId = pendingTabIds.shift();
+      if (!tabId) {
+        console.warn("[GPTPS] command_result received without an originating ChatGPT tab");
+        return;
+      }
 
-      chrome.tabs.sendMessage(tab.id, {
-        type: "GPTPS_COMMAND_RESULT",
-        payload
-      });
+      try {
+        await chrome.tabs.sendMessage(tabId, {
+          type: "GPTPS_COMMAND_RESULT",
+          payload
+        });
+      } catch (error) {
+        console.warn("[GPTPS] failed to return command result to originating tab", error);
+      }
+      return;
+    }
+
+    if (payload.type === "paused" || payload.type === "blocked" || payload.type === "error") {
+      pendingTabIds.shift();
     }
   });
 
@@ -59,7 +71,7 @@ function connect() {
 chrome.runtime.onInstalled.addListener(connect);
 chrome.runtime.onStartup.addListener(connect);
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type !== "GPTPS_ASSISTANT_COMMAND") return;
 
   connect();
@@ -70,8 +82,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return;
     }
 
+    const tabId = sender?.tab?.id;
+    if (!tabId) {
+      sendResponse({ ok: false, error: "originating ChatGPT tab is unavailable" });
+      return;
+    }
+
+    pendingTabIds.push(tabId);
     socket.send(JSON.stringify(message.payload));
-    sendResponse({ ok: true });
+    sendResponse({ ok: true, tab_id: tabId });
   };
 
   if (socket?.readyState === WebSocket.CONNECTING) {
