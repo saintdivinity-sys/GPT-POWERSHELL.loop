@@ -2,9 +2,24 @@
   const seen = new Set();
   let busy = false;
   let scanTimer = null;
+  let badge = null;
 
   function textOf(element) {
     return (element?.innerText || element?.textContent || "").trim();
+  }
+
+  function setBadge(text, state = "idle") {
+    if (!badge) return;
+    badge.textContent = text;
+    const colors = {
+      idle: ["rgba(12,18,22,.88)", "#bde5bd", "rgba(120,200,120,.55)"],
+      sending: ["rgba(28,24,10,.92)", "#ffe69a", "rgba(230,190,80,.65)"],
+      ok: ["rgba(10,28,18,.92)", "#bdf5cd", "rgba(100,220,140,.7)"],
+      error: ["rgba(35,12,12,.94)", "#ffb7b7", "rgba(230,90,90,.75)"],
+      result: ["rgba(12,22,34,.94)", "#b9d9ff", "rgba(100,160,230,.75)"]
+    };
+    const [background, color, borderColor] = colors[state] || colors.idle;
+    Object.assign(badge.style, { background, color, borderColor });
   }
 
   function extractMarkedPowerShell(article) {
@@ -53,8 +68,8 @@
     const command = extractMarkedPowerShell(last);
     if (!command) return;
 
-    seen.add(key);
     busy = true;
+    setBadge("GPT↔PS SEND…", "sending");
 
     chrome.runtime.sendMessage({
       type: "GPTPS_ASSISTANT_COMMAND",
@@ -64,7 +79,20 @@
         command,
         assistant_text: textOf(last).slice(0, 12000)
       }
-    }, () => {
+    }, (response) => {
+      const runtimeError = chrome.runtime.lastError;
+
+      if (runtimeError || !response?.ok) {
+        console.warn("[GPTPS] command was not accepted by extension background", runtimeError?.message || response?.error || response);
+        setBadge("GPT↔PS ERR", "error");
+        busy = false;
+        clearTimeout(scanTimer);
+        scanTimer = setTimeout(scan, 1500);
+        return;
+      }
+
+      seen.add(key);
+      setBadge("GPT↔PS SENT", "ok");
       busy = false;
     });
   }
@@ -102,9 +130,12 @@
   }
 
   async function submitResult(payload) {
+    setBadge("GPT↔PS RESULT", "result");
+
     const composer = findComposer();
     if (!composer) {
       console.warn("[GPTPS] composer not found; result was not submitted");
+      setBadge("GPT↔PS RESULT ERR", "error");
       return;
     }
 
@@ -121,15 +152,17 @@
     ].join("\n");
 
     setComposerText(composer, body);
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 250));
 
     const button = findSendButton();
     if (!button || button.disabled) {
       console.warn("[GPTPS] send button unavailable; result left in composer");
+      setBadge("GPT↔PS RESULT WAIT", "error");
       return;
     }
 
     button.click();
+    setBadge("GPT↔PS SENT BACK", "ok");
   }
 
   chrome.runtime.onMessage.addListener((message) => {
@@ -146,7 +179,7 @@
   observer.observe(document.documentElement, { childList: true, subtree: true });
   setInterval(scan, 1500);
 
-  const badge = document.createElement("div");
+  badge = document.createElement("div");
   badge.textContent = "GPT↔PS";
   Object.assign(badge.style, {
     position: "fixed",
