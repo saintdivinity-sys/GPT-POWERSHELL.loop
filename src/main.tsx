@@ -5,16 +5,46 @@ import "./styles.css";
 
 type Mode = "step" | "auto_safe" | "paused" | "stopped";
 
+type BridgeSnapshot = {
+  mode: Mode;
+  port: number;
+  server_started: boolean;
+  timeout_seconds: number;
+};
+
 function App() {
   const [mode, setMode] = React.useState<Mode>("stopped");
   const [status, setStatus] = React.useState("Bridge offline");
   const [port, setPort] = React.useState(47177);
+  const [serverStarted, setServerStarted] = React.useState(false);
+
+  const syncState = React.useCallback(async () => {
+    try {
+      const snapshot = await invoke<BridgeSnapshot>("get_state");
+      setMode(snapshot.mode);
+      setServerStarted(snapshot.server_started);
+      setPort(snapshot.port);
+
+      if (snapshot.server_started) {
+        setStatus(`Listening on ws://127.0.0.1:${snapshot.port} · Mode: ${snapshot.mode}`);
+      } else {
+        setStatus(snapshot.mode === "stopped" ? "Bridge offline" : `Mode: ${snapshot.mode}`);
+      }
+    } catch (error) {
+      setStatus(String(error));
+    }
+  }, []);
+
+  React.useEffect(() => {
+    syncState();
+    const timer = window.setInterval(syncState, 500);
+    return () => window.clearInterval(timer);
+  }, [syncState]);
 
   async function setBridgeMode(next: Mode) {
     try {
       await invoke("set_mode", { mode: next });
-      setMode(next);
-      setStatus(next === "stopped" ? "Stopped" : `Mode: ${next}`);
+      await syncState();
     } catch (error) {
       setStatus(String(error));
     }
@@ -22,9 +52,8 @@ function App() {
 
   async function startBridge() {
     try {
-      const result = await invoke<string>("start_bridge", { port });
-      setStatus(result);
-      if (mode === "stopped") setMode("step");
+      await invoke<string>("start_bridge", { port });
+      await syncState();
     } catch (error) {
       setStatus(String(error));
     }
@@ -58,10 +87,13 @@ function App() {
               min={1024}
               max={65535}
               value={port}
+              disabled={serverStarted}
               onChange={(event) => setPort(Number(event.target.value) || 47177)}
             />
           </label>
-          <button onClick={startBridge}>Start local bridge</button>
+          <button onClick={startBridge} disabled={serverStarted}>
+            {serverStarted ? "Bridge running" : "Start local bridge"}
+          </button>
         </article>
 
         <article>
