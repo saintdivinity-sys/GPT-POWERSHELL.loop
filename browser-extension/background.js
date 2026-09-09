@@ -52,7 +52,20 @@ function connect() {
     }
 
     if (payload.type === "paused" || payload.type === "blocked" || payload.type === "error") {
-      pendingTabIds.shift();
+      const tabId = pendingTabIds.shift();
+      if (!tabId) {
+        console.warn("[GPTPS] bridge status received without an originating ChatGPT tab", payload);
+        return;
+      }
+
+      try {
+        await chrome.tabs.sendMessage(tabId, {
+          type: "GPTPS_BRIDGE_STATUS",
+          payload
+        });
+      } catch (error) {
+        console.warn("[GPTPS] failed to return bridge status to originating tab", error);
+      }
     }
   });
 
