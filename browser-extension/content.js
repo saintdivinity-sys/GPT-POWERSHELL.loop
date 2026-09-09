@@ -139,6 +139,65 @@
     return null;
   }
 
+  function resultStillInComposer(body) {
+    const composer = findComposer();
+    if (!composer) return false;
+    const current = textOf(composer);
+    if (!current) return false;
+    return current.includes("GPTPS_RESULT") || current.includes(body.slice(0, 80));
+  }
+
+  async function waitForSubmission(body, timeoutMs = 1800) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      if (!resultStillInComposer(body)) return true;
+    }
+    return false;
+  }
+
+  async function trySubmitResult(composer, body) {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      const button = findSendButton();
+      if (!button || button.disabled) continue;
+
+      button.click();
+      if (await waitForSubmission(body)) return true;
+
+      const form = composer.closest("form");
+      if (form && typeof form.requestSubmit === "function") {
+        try {
+          form.requestSubmit(button);
+          if (await waitForSubmission(body)) return true;
+        } catch (error) {
+          console.warn("[GPTPS] requestSubmit(button) failed", error);
+        }
+      }
+
+      composer.focus();
+      composer.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "Enter",
+        code: "Enter",
+        keyCode: 13,
+        which: 13,
+        bubbles: true,
+        cancelable: true
+      }));
+      composer.dispatchEvent(new KeyboardEvent("keyup", {
+        key: "Enter",
+        code: "Enter",
+        keyCode: 13,
+        which: 13,
+        bubbles: true,
+        cancelable: true
+      }));
+      if (await waitForSubmission(body)) return true;
+    }
+
+    return false;
+  }
+
   async function submitResult(payload) {
     setBadge("GPT↔PS RESULT", "result");
 
@@ -163,28 +222,12 @@
 
     setComposerText(composer, body);
 
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 250));
-      const button = findSendButton();
-      if (button && !button.disabled) {
-        button.click();
-        setBadge("GPT↔PS SENT BACK", "ok");
-        return;
-      }
+    if (await trySubmitResult(composer, body)) {
+      setBadge("GPT↔PS SENT BACK", "ok");
+      return;
     }
 
-    const form = composer.closest("form");
-    if (form && typeof form.requestSubmit === "function") {
-      try {
-        form.requestSubmit();
-        setBadge("GPT↔PS SENT BACK", "ok");
-        return;
-      } catch (error) {
-        console.warn("[GPTPS] requestSubmit fallback failed", error);
-      }
-    }
-
-    console.warn("[GPTPS] send button unavailable after waiting; result left in composer");
+    console.warn("[GPTPS] automatic result submission did not complete; result left in composer");
     setBadge("GPT↔PS RESULT WAIT", "error");
   }
 
