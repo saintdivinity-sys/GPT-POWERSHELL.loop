@@ -124,9 +124,19 @@
   }
 
   function findSendButton() {
-    return document.querySelector('button[data-testid="send-button"]') ||
-      document.querySelector('button[aria-label*="Send"]') ||
-      document.querySelector('button[aria-label*="Отправ"]');
+    const selectors = [
+      'button[data-testid="send-button"]',
+      'button[aria-label*="Send"]',
+      'button[aria-label*="Отправ"]',
+      'form button[type="submit"]'
+    ];
+
+    for (const selector of selectors) {
+      const button = document.querySelector(selector);
+      if (button) return button;
+    }
+
+    return null;
   }
 
   async function submitResult(payload) {
@@ -152,22 +162,43 @@
     ].join("\n");
 
     setComposerText(composer, body);
-    await new Promise((resolve) => setTimeout(resolve, 250));
 
-    const button = findSendButton();
-    if (!button || button.disabled) {
-      console.warn("[GPTPS] send button unavailable; result left in composer");
-      setBadge("GPT↔PS RESULT WAIT", "error");
-      return;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      const button = findSendButton();
+      if (button && !button.disabled) {
+        button.click();
+        setBadge("GPT↔PS SENT BACK", "ok");
+        return;
+      }
     }
 
-    button.click();
-    setBadge("GPT↔PS SENT BACK", "ok");
+    const form = composer.closest("form");
+    if (form && typeof form.requestSubmit === "function") {
+      try {
+        form.requestSubmit();
+        setBadge("GPT↔PS SENT BACK", "ok");
+        return;
+      } catch (error) {
+        console.warn("[GPTPS] requestSubmit fallback failed", error);
+      }
+    }
+
+    console.warn("[GPTPS] send button unavailable after waiting; result left in composer");
+    setBadge("GPT↔PS RESULT WAIT", "error");
   }
 
   chrome.runtime.onMessage.addListener((message) => {
     if (message?.type === "GPTPS_COMMAND_RESULT") {
       submitResult(message.payload);
+      return;
+    }
+
+    if (message?.type === "GPTPS_BRIDGE_STATUS") {
+      const payload = message.payload || {};
+      const detail = payload.message || payload.reason || payload.type || "bridge error";
+      console.warn("[GPTPS] bridge status:", detail);
+      setBadge(`GPT↔PS ${String(payload.type || "ERR").toUpperCase()}`, "error");
     }
   });
 
