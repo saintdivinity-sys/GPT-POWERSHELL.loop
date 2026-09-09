@@ -4,7 +4,6 @@ use futures_util::{stream::SplitSink, SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, process::Stdio, sync::Arc, time::Duration};
 use tokio::{
-    io::AsyncWriteExt,
     net::{TcpListener, TcpStream},
     process::Command,
     sync::Mutex,
@@ -174,25 +173,25 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
     Ok(())
 }
 
-fn powershell_command(executable: &str) -> Command {
+fn powershell_command(executable: &str, script: &str) -> Command {
     let mut command = Command::new(executable);
     command
         .arg("-NoLogo")
         .arg("-NoProfile")
         .arg("-NonInteractive")
         .arg("-Command")
-        .arg("-")
-        .stdin(Stdio::piped())
+        .arg(script)
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true);
     command
 }
 
-fn spawn_powershell() -> Result<tokio::process::Child, String> {
-    match powershell_command("pwsh.exe").spawn() {
+fn spawn_powershell(script: &str) -> Result<tokio::process::Child, String> {
+    match powershell_command("pwsh.exe", script).spawn() {
         Ok(child) => Ok(child),
-        Err(pwsh_error) => match powershell_command("powershell.exe").spawn() {
+        Err(pwsh_error) => match powershell_command("powershell.exe", script).spawn() {
             Ok(child) => Ok(child),
             Err(windows_powershell_error) => Err(format!(
                 "failed to start PowerShell. pwsh.exe: {pwsh_error}; powershell.exe: {windows_powershell_error}"
@@ -205,12 +204,11 @@ async fn run_powershell(command: &str, timeout_seconds: u64) -> Result<ServerMes
     let cycle_id = Uuid::new_v4().to_string();
     let started = Utc::now();
 
-    let mut child = spawn_powershell()?;
-
-    if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(command.as_bytes()).await.map_err(|error| error.to_string())?;
-        stdin.write_all(b"\nexit $LASTEXITCODE\n").await.map_err(|error| error.to_string())?;
-    }
+    let script = format!(
+        "{}\nif ($null -eq $LASTEXITCODE) {{ exit 0 }} else {{ exit $LASTEXITCODE }}",
+        command
+    );
+    let child = spawn_powershell(&script)?;
 
     let output = timeout(
         Duration::from_secs(timeout_seconds),
