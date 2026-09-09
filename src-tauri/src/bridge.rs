@@ -174,11 +174,9 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
     Ok(())
 }
 
-async fn run_powershell(command: &str, timeout_seconds: u64) -> Result<ServerMessage, String> {
-    let cycle_id = Uuid::new_v4().to_string();
-    let started = Utc::now();
-
-    let mut child = Command::new("pwsh.exe")
+fn powershell_command(executable: &str) -> Command {
+    let mut command = Command::new(executable);
+    command
         .arg("-NoLogo")
         .arg("-NoProfile")
         .arg("-NonInteractive")
@@ -187,9 +185,27 @@ async fn run_powershell(command: &str, timeout_seconds: u64) -> Result<ServerMes
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .kill_on_drop(true)
-        .spawn()
-        .map_err(|error| format!("failed to start pwsh.exe: {error}"))?;
+        .kill_on_drop(true);
+    command
+}
+
+fn spawn_powershell() -> Result<tokio::process::Child, String> {
+    match powershell_command("pwsh.exe").spawn() {
+        Ok(child) => Ok(child),
+        Err(pwsh_error) => match powershell_command("powershell.exe").spawn() {
+            Ok(child) => Ok(child),
+            Err(windows_powershell_error) => Err(format!(
+                "failed to start PowerShell. pwsh.exe: {pwsh_error}; powershell.exe: {windows_powershell_error}"
+            )),
+        },
+    }
+}
+
+async fn run_powershell(command: &str, timeout_seconds: u64) -> Result<ServerMessage, String> {
+    let cycle_id = Uuid::new_v4().to_string();
+    let started = Utc::now();
+
+    let mut child = spawn_powershell()?;
 
     if let Some(mut stdin) = child.stdin.take() {
         stdin.write_all(command.as_bytes()).await.map_err(|error| error.to_string())?;
