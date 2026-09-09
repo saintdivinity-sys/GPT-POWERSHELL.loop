@@ -7,3 +7,5 @@ src-tauri/target/
 *.log
 sessions/
 .DS_Store
+
+src-tauri/gen/
