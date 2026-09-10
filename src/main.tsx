@@ -6,6 +6,12 @@ import "./styles.css";
 type Mode = "step" | "auto_safe" | "paused" | "stopped";
 type AlertSound = "error" | "attention" | "critical";
 
+declare global {
+  interface Window {
+    __GPTPS_OVERLAY_KIND__?: AlertSound;
+  }
+}
+
 type BridgeSnapshot = {
   mode: Mode;
   port: number;
@@ -20,6 +26,17 @@ type ConsoleEntry = {
   text: string;
 };
 
+function OverlayApp({ kind }: { kind: AlertSound }) {
+  const content = kind === "error" ? "?" : kind === "attention" ? "!" : "CRITICAL";
+  const label = kind === "error" ? "PowerShell error" : kind === "attention" ? "Attention required" : "Critical bridge event";
+
+  return (
+    <main className={`alertOverlay ${kind}`} aria-label={label}>
+      <div className="alertVisual">{content}</div>
+    </main>
+  );
+}
+
 function App() {
   const [mode, setMode] = React.useState<Mode>("stopped");
   const [status, setStatus] = React.useState("Bridge offline");
@@ -27,10 +44,13 @@ function App() {
   const [serverStarted, setServerStarted] = React.useState(false);
   const [consoleEntries, setConsoleEntries] = React.useState<ConsoleEntry[]>([]);
   const [soundEnabled, setSoundEnabled] = React.useState(() => localStorage.getItem("gptps_sound_enabled") !== "off");
+  const [soundMenuOpen, setSoundMenuOpen] = React.useState(false);
   const consoleEndRef = React.useRef<HTMLDivElement | null>(null);
   const audioContextRef = React.useRef<AudioContext | null>(null);
   const soundBaselineReadyRef = React.useRef(false);
   const lastSoundEntryIdRef = React.useRef(0);
+  const soundOpenTimerRef = React.useRef<number | null>(null);
+  const soundCloseTimerRef = React.useRef<number | null>(null);
 
   const ensureAudioReady = React.useCallback(async () => {
     if (!audioContextRef.current) {
@@ -44,8 +64,8 @@ function App() {
     return audioContextRef.current;
   }, []);
 
-  const playAlertSound = React.useCallback(async (kind: AlertSound) => {
-    if (!soundEnabled) return;
+  const playAlertSound = React.useCallback(async (kind: AlertSound, force = false) => {
+    if (!soundEnabled && !force) return;
 
     let context: AudioContext;
     try {
@@ -61,7 +81,8 @@ function App() {
       offset: number,
       duration: number,
       volume: number,
-      type: OscillatorType = "sine"
+      type: OscillatorType = "sine",
+      endFrequency?: number
     ) => {
       const oscillator = context.createOscillator();
       const gain = context.createGain();
@@ -70,8 +91,13 @@ function App() {
 
       oscillator.type = type;
       oscillator.frequency.setValueAtTime(frequency, start);
+      if (endFrequency && endFrequency > 0) {
+        oscillator.frequency.exponentialRampToValueAtTime(endFrequency, end);
+      }
+
       gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(volume, start + Math.min(0.03, duration * 0.2));
+      gain.gain.exponentialRampToValueAtTime(volume, start + Math.min(0.025, duration * 0.15));
+      gain.gain.setValueAtTime(volume, Math.max(start + 0.03, end - 0.08));
       gain.gain.exponentialRampToValueAtTime(0.0001, end);
       oscillator.connect(gain);
       gain.connect(context.destination);
@@ -79,14 +105,16 @@ function App() {
       oscillator.stop(end + 0.03);
     };
 
-    // Deliberately louder than normal UI feedback so alerts remain noticeable
-    // while music, video, a game, or another application is playing.
+    // ERROR: deliberately non-musical, game-show-style wrong-answer buzzer.
+    // It is low, rough and descending so it cannot be confused with Attention/Critical.
     if (kind === "error") {
-      tone(659.25, 0.00, 0.28, 0.18, "triangle");
-      tone(493.88, 0.24, 0.42, 0.22, "triangle");
+      tone(188.0, 0.00, 0.56, 0.22, "sawtooth", 116.0);
+      tone(143.0, 0.01, 0.55, 0.14, "square", 91.0);
+      tone(97.0, 0.02, 0.53, 0.08, "sawtooth", 72.0);
       return;
     }
 
+    // ATTENTION: preserve the accepted rising three-note signal.
     if (kind === "attention") {
       tone(523.25, 0.00, 0.24, 0.14, "triangle");
       tone(659.25, 0.18, 0.28, 0.16, "triangle");
@@ -94,10 +122,26 @@ function App() {
       return;
     }
 
+    // CRITICAL: preserve the accepted low-high-mid three-note pattern.
     tone(261.63, 0.00, 0.32, 0.20, "triangle");
     tone(523.25, 0.26, 0.34, 0.24, "triangle");
     tone(329.63, 0.54, 0.48, 0.24, "triangle");
   }, [ensureAudioReady, soundEnabled]);
+
+  const showAlertOverlay = React.useCallback(async (kind: AlertSound) => {
+    try {
+      await invoke<number>("show_alert_overlay", { kind });
+    } catch (error) {
+      console.warn("[GPTPS] failed to show alert overlay", error);
+    }
+  }, []);
+
+  const presentAlert = React.useCallback((kind: AlertSound, forceSound = false) => {
+    if (soundEnabled || forceSound) {
+      void playAlertSound(kind, forceSound);
+    }
+    void showAlertOverlay(kind);
+  }, [playAlertSound, showAlertOverlay, soundEnabled]);
 
   const syncState = React.useCallback(async () => {
     try {
@@ -142,7 +186,7 @@ function App() {
 
     const fresh = consoleEntries.filter((entry) => entry.id > lastSoundEntryIdRef.current);
     lastSoundEntryIdRef.current = maxId;
-    if (!soundEnabled || fresh.length === 0) return;
+    if (fresh.length === 0) return;
 
     let requested: AlertSound | null = null;
 
@@ -165,9 +209,45 @@ function App() {
     }
 
     if (requested) {
-      void playAlertSound(requested);
+      presentAlert(requested);
     }
-  }, [consoleEntries, playAlertSound, soundEnabled]);
+  }, [consoleEntries, presentAlert]);
+
+  React.useEffect(() => {
+    return () => {
+      if (soundOpenTimerRef.current !== null) window.clearTimeout(soundOpenTimerRef.current);
+      if (soundCloseTimerRef.current !== null) window.clearTimeout(soundCloseTimerRef.current);
+    };
+  }, []);
+
+  function beginSoundMenuHover() {
+    if (soundCloseTimerRef.current !== null) {
+      window.clearTimeout(soundCloseTimerRef.current);
+      soundCloseTimerRef.current = null;
+    }
+    if (soundMenuOpen || soundOpenTimerRef.current !== null) return;
+
+    soundOpenTimerRef.current = window.setTimeout(() => {
+      setSoundMenuOpen(true);
+      soundOpenTimerRef.current = null;
+    }, 1000);
+  }
+
+  function endSoundMenuHover() {
+    if (soundOpenTimerRef.current !== null) {
+      window.clearTimeout(soundOpenTimerRef.current);
+      soundOpenTimerRef.current = null;
+    }
+
+    soundCloseTimerRef.current = window.setTimeout(() => {
+      setSoundMenuOpen(false);
+      soundCloseTimerRef.current = null;
+    }, 220);
+  }
+
+  async function testAlert(kind: AlertSound) {
+    presentAlert(kind, true);
+  }
 
   async function setBridgeMode(next: Mode) {
     try {
@@ -219,14 +299,30 @@ function App() {
           <h1>GPT-POWERSHELL.loop</h1>
         </div>
         <div className="headerControls">
-          <button
-            className={`soundToggle ${soundEnabled ? "on" : "off"}`}
-            onClick={toggleSound}
-            aria-pressed={soundEnabled}
-            title="Sound alerts: PowerShell error, ChatGPT attention, critical bridge event"
+          <div
+            className="soundControlWrap"
+            onMouseEnter={beginSoundMenuHover}
+            onMouseLeave={endSoundMenuHover}
           >
-            {soundEnabled ? "🔊 SOUND ON" : "🔇 SOUND OFF"}
-          </button>
+            <button
+              className={`soundToggle ${soundEnabled ? "on" : "off"}`}
+              onClick={toggleSound}
+              aria-pressed={soundEnabled}
+              title="Sound alerts: hover for 1 second to test Error, Attention and Critical"
+            >
+              {soundEnabled ? "🔊 SOUND ON" : "🔇 SOUND OFF"}
+            </button>
+
+            {soundMenuOpen && (
+              <div className="soundTestMenu" role="menu" aria-label="Test alert sounds">
+                <div className="soundTestTitle">TEST ALERTS</div>
+                <button className="soundTestButton error" onClick={() => void testAlert("error")}>ERROR</button>
+                <button className="soundTestButton attention" onClick={() => void testAlert("attention")}>ATTENTION</button>
+                <button className="soundTestButton critical" onClick={() => void testAlert("critical")}>CRITICAL</button>
+                <div className="soundTestHint">sound + overlay</div>
+              </div>
+            )}
+          </div>
           <span className={`pill ${mode}`}>{mode.toUpperCase()}</span>
         </div>
       </header>
@@ -321,6 +417,14 @@ function App() {
   );
 }
 
+const overlayKind = window.__GPTPS_OVERLAY_KIND__;
+if (overlayKind) {
+  document.documentElement.classList.add("overlay-mode");
+  document.body.classList.add("overlay-mode-body");
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode><App /></React.StrictMode>
+  <React.StrictMode>
+    {overlayKind ? <OverlayApp kind={overlayKind} /> : <App />}
+  </React.StrictMode>
 );
