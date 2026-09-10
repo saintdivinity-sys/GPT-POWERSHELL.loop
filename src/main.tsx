@@ -71,7 +71,7 @@ function App() {
       oscillator.type = type;
       oscillator.frequency.setValueAtTime(frequency, start);
       gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(volume, start + Math.min(0.045, duration * 0.25));
+      gain.gain.exponentialRampToValueAtTime(volume, start + Math.min(0.03, duration * 0.2));
       gain.gain.exponentialRampToValueAtTime(0.0001, end);
       oscillator.connect(gain);
       gain.connect(context.destination);
@@ -79,22 +79,24 @@ function App() {
       oscillator.stop(end + 0.03);
     };
 
+    // Deliberately louder than normal UI feedback so alerts remain noticeable
+    // while music, video, a game, or another application is playing.
     if (kind === "error") {
-      tone(523.25, 0.00, 0.24, 0.035, "sine");
-      tone(392.00, 0.26, 0.34, 0.038, "sine");
+      tone(659.25, 0.00, 0.28, 0.18, "triangle");
+      tone(493.88, 0.24, 0.42, 0.22, "triangle");
       return;
     }
 
     if (kind === "attention") {
-      tone(523.25, 0.00, 0.22, 0.030, "sine");
-      tone(659.25, 0.20, 0.25, 0.032, "sine");
-      tone(783.99, 0.42, 0.34, 0.028, "sine");
+      tone(523.25, 0.00, 0.24, 0.14, "triangle");
+      tone(659.25, 0.18, 0.28, 0.16, "triangle");
+      tone(783.99, 0.40, 0.42, 0.18, "triangle");
       return;
     }
 
-    tone(261.63, 0.00, 0.30, 0.040, "triangle");
-    tone(523.25, 0.28, 0.30, 0.040, "triangle");
-    tone(329.63, 0.56, 0.42, 0.043, "triangle");
+    tone(261.63, 0.00, 0.32, 0.20, "triangle");
+    tone(523.25, 0.26, 0.34, 0.24, "triangle");
+    tone(329.63, 0.54, 0.48, 0.24, "triangle");
   }, [ensureAudioReady, soundEnabled]);
 
   const syncState = React.useCallback(async () => {
