@@ -33,6 +33,7 @@ pub struct BridgeState {
     pub port: u16,
     pub server_started: bool,
     pub timeout_seconds: u64,
+    pub attention_armed_at_ms: Option<i64>,
     console_log: VecDeque<ConsoleEntry>,
     next_console_id: u64,
 }
@@ -44,6 +45,7 @@ impl Default for BridgeState {
             port: 47177,
             server_started: false,
             timeout_seconds: 300,
+            attention_armed_at_ms: None,
             console_log: VecDeque::new(),
             next_console_id: 1,
         }
@@ -55,6 +57,11 @@ impl BridgeState {
         match mode {
             "step" | "auto_safe" | "paused" | "stopped" => {
                 self.mode = mode.to_string();
+                self.attention_armed_at_ms = if mode == "step" || mode == "auto_safe" {
+                    Some(Utc::now().timestamp_millis())
+                } else {
+                    None
+                };
                 Ok(())
             }
             _ => Err("invalid mode".into()),
@@ -100,6 +107,7 @@ enum ClientMessage {
     },
     AttentionRequired {
         assistant_text: Option<String>,
+        observed_at_ms: Option<i64>,
     },
     Ping,
 }
@@ -170,10 +178,25 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
                 }
             }
             ClientMessage::Ping => send_json(&mut sink, &ServerMessage::Pong).await?,
-            ClientMessage::AttentionRequired { assistant_text } => {
+            ClientMessage::AttentionRequired { assistant_text, observed_at_ms } => {
                 let mut guard = state.lock().await;
                 if guard.mode == "step" || guard.mode == "auto_safe" {
+                    let stale = match (observed_at_ms, guard.attention_armed_at_ms) {
+                        (Some(observed), Some(armed)) => observed < armed,
+                        (None, Some(_)) => true,
+                        _ => false,
+                    };
+
+                    if stale {
+                        guard.push_console(
+                            "meta",
+                            "Ignored stale ATTENTION candidate that existed before STEP/AUTO SAFE was armed.",
+                        );
+                        continue;
+                    }
+
                     guard.mode = "paused".into();
+                    guard.attention_armed_at_ms = None;
                     guard.push_console(
                         "attention",
                         "ChatGPT requires attention: no GPTPS_EXEC command was provided. Loop paused.",
@@ -211,6 +234,7 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
                 if !decision.allowed {
                     let mut guard = state.lock().await;
                     guard.mode = "paused".into();
+                    guard.attention_armed_at_ms = None;
                     guard.push_console("critical", format!("Blocked by safety gate: {}", decision.reason));
                     drop(guard);
                     send_json(&mut sink, &ServerMessage::Blocked {
@@ -224,9 +248,8 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
                 let timeout_seconds = state.lock().await.timeout_seconds;
                 match run_powershell(&command, timeout_seconds).await {
                     Ok(result) => {
-                        let mut failed = false;
                         if let ServerMessage::CommandResult { cycle_id, exit_code, stdout, stderr, .. } = &result {
-                            failed = *exit_code != 0;
+                            let failed = *exit_code != 0;
                             let mut guard = state.lock().await;
                             guard.push_console("meta", format!("cycle_id: {cycle_id} · exit_code: {exit_code}"));
                             if !stdout.trim().is_empty() {
@@ -238,9 +261,11 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
 
                             if mode == "step" {
                                 guard.mode = "paused".into();
+                                guard.attention_armed_at_ms = None;
                                 guard.push_console("status", "STEP complete → PAUSED");
                             } else if failed {
                                 guard.mode = "paused".into();
+                                guard.attention_armed_at_ms = None;
                                 guard.push_console("status", "Command failed → PAUSED");
                             }
                         }
@@ -251,6 +276,7 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
                     Err(message) => {
                         let mut guard = state.lock().await;
                         guard.mode = "paused".into();
+                        guard.attention_armed_at_ms = None;
                         guard.push_console("critical", message.clone());
                         guard.push_console("status", "Execution failure → PAUSED");
                         drop(guard);
