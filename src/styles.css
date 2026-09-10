@@ -13,9 +13,28 @@ h2 { margin-top: 0; font-size: 16px; }
 .eyebrow { margin: 0 0 6px; font-size: 11px; letter-spacing: .14em; color: #8e9aa7; }
 .headerControls { display: flex; align-items: center; gap: 10px; }
 .pill { padding: 7px 10px; border: 1px solid #33404b; border-radius: 999px; font-size: 11px; }
+.soundControlWrap { position: relative; display: flex; align-items: center; z-index: 20; }
 .soundToggle { margin: 0; padding: 7px 10px; border-radius: 999px; font-size: 11px; letter-spacing: .02em; }
 .soundToggle.on { border-color: #3f6a52; background: #1a3326; color: #c9f5d7; }
 .soundToggle.off { border-color: #4b5057; background: #22272d; color: #a7b0ba; }
+.soundTestMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 168px;
+  padding: 9px;
+  border: 1px solid #3b4652;
+  border-radius: 11px;
+  background: rgba(12, 16, 21, .98);
+  box-shadow: 0 14px 34px rgba(0,0,0,.38);
+  backdrop-filter: blur(10px);
+}
+.soundTestTitle { margin: 2px 4px 7px; color: #788692; font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.soundTestButton { width: 100%; margin: 3px 0; padding: 8px 9px; text-align: left; font-size: 11px; font-weight: 750; }
+.soundTestButton.error { border-color: #85434b; color: #ffadb5; }
+.soundTestButton.attention { border-color: #7c6736; color: #ffdc8b; }
+.soundTestButton.critical { border-color: #a63d4a; background: #3a1c22; color: #ff8f9b; }
+.soundTestHint { margin: 7px 4px 1px; color: #697581; font-size: 9px; }
 .hero, article, .collapsible { border: 1px solid #28323d; background: #151a21; border-radius: 14px; }
 .hero { margin: 24px 0; padding: 18px; display: flex; align-items: center; gap: 12px; }
 .hero p { margin: 4px 0 0; color: #95a0ad; }
@@ -110,6 +129,71 @@ pre { overflow: auto; padding: 14px; border-radius: 9px; background: #0c1015; co
 .consoleEntry.attention .consoleEntryText { color: #ffd98b; font-weight: 650; }
 .consoleEntry.critical { border-left-color: #ff5968; background: rgba(120,20,31,.24); box-shadow: inset 0 0 0 1px rgba(255,89,104,.08); }
 .consoleEntry.critical .consoleEntryText { color: #ffabb3; font-weight: 700; }
+
+/* Dedicated transparent always-on-top alert windows. */
+html.overlay-mode,
+body.overlay-mode-body,
+html.overlay-mode #root {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+.alertOverlay {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  background: transparent;
+}
+.alertVisual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: 100%;
+  font-family: Inter, "Arial Black", Segoe UI, sans-serif;
+  font-weight: 950;
+  line-height: .9;
+  opacity: 0;
+  transform: scale(.84);
+  animation: gptpsAlertFlash 1.80s cubic-bezier(.18,.8,.24,1) forwards;
+  filter: drop-shadow(0 0 18px rgba(0,0,0,.7));
+}
+.alertOverlay.error .alertVisual {
+  color: rgba(255, 38, 54, .72);
+  font-size: min(78vw, 88vh);
+  text-shadow: 0 0 22px rgba(255, 20, 40, .42);
+}
+.alertOverlay.attention .alertVisual {
+  width: min(70vw, 82vh);
+  aspect-ratio: 1;
+  border: .075em solid rgba(255, 202, 48, .68);
+  border-radius: 50%;
+  color: rgba(255, 210, 55, .74);
+  font-size: min(50vw, 62vh);
+  text-shadow: 0 0 20px rgba(255, 190, 20, .42);
+}
+.alertOverlay.critical .alertVisual {
+  color: rgba(255, 35, 50, .76);
+  font-size: min(18vw, 26vh);
+  letter-spacing: .045em;
+  text-shadow: 0 0 24px rgba(255, 20, 35, .48);
+}
+@keyframes gptpsAlertFlash {
+  0% { opacity: 0; transform: scale(.84); }
+  10% { opacity: .74; transform: scale(1.06); }
+  18% { opacity: .68; transform: scale(1); }
+  72% { opacity: .70; transform: scale(1); }
+  100% { opacity: 0; transform: scale(.96); }
+}
 
 @media (max-width: 720px) {
   .grid { grid-template-columns: 1fr; }
