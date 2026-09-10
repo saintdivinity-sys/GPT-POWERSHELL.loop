@@ -4,11 +4,17 @@
   let busy = false;
   let scanTimer = null;
   let badge = null;
+  let badgeVisible = true;
   let attentionCandidate = null;
   let initialAttentionKey = null;
 
   function textOf(element) {
     return (element?.innerText || element?.textContent || "").trim();
+  }
+
+  function applyBadgeVisibility() {
+    if (!badge) return;
+    badge.style.display = badgeVisible ? "block" : "none";
   }
 
   function setBadge(text, state = "idle") {
@@ -24,6 +30,7 @@
     };
     const [background, color, borderColor] = colors[state] || colors.idle;
     Object.assign(badge.style, { background, color, borderColor });
+    applyBadgeVisibility();
   }
 
   function extractMarkedPowerShell(article) {
@@ -305,6 +312,12 @@
     }
   });
 
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local" || !changes.badgeVisible) return;
+    badgeVisible = changes.badgeVisible.newValue !== false;
+    applyBadgeVisibility();
+  });
+
   const observer = new MutationObserver(() => {
     clearTimeout(scanTimer);
     scanTimer = setTimeout(scan, 350);
@@ -314,6 +327,7 @@
   setInterval(scan, 1500);
 
   badge = document.createElement("div");
+  badge.id = "gptps-status-badge";
   badge.textContent = "GPT↔PS";
   Object.assign(badge.style, {
     position: "fixed",
@@ -329,6 +343,11 @@
     pointerEvents: "none"
   });
   document.documentElement.appendChild(badge);
+
+  chrome.storage.local.get({ badgeVisible: true }, (result) => {
+    badgeVisible = result.badgeVisible !== false;
+    applyBadgeVisibility();
+  });
 
   const currentMessages = assistantMessages();
   const currentLast = currentMessages[currentMessages.length - 1];
