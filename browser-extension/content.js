@@ -1,8 +1,11 @@
 (() => {
   const seen = new Set();
+  const attentionSeen = new Set();
   let busy = false;
   let scanTimer = null;
   let badge = null;
+  let attentionCandidate = null;
+  let initialAttentionKey = null;
 
   function textOf(element) {
     return (element?.innerText || element?.textContent || "").trim();
@@ -16,7 +19,8 @@
       sending: ["rgba(28,24,10,.92)", "#ffe69a", "rgba(230,190,80,.65)"],
       ok: ["rgba(10,28,18,.92)", "#bdf5cd", "rgba(100,220,140,.7)"],
       error: ["rgba(35,12,12,.94)", "#ffb7b7", "rgba(230,90,90,.75)"],
-      result: ["rgba(12,22,34,.94)", "#b9d9ff", "rgba(100,160,230,.75)"]
+      result: ["rgba(12,22,34,.94)", "#b9d9ff", "rgba(100,160,230,.75)"],
+      attention: ["rgba(38,27,8,.95)", "#ffe5a3", "rgba(235,181,71,.82)"]
     };
     const [background, color, borderColor] = colors[state] || colors.idle;
     Object.assign(badge.style, { background, color, borderColor });
@@ -55,6 +59,47 @@
       textOf(article).slice(0, 220);
   }
 
+  function isGenerating() {
+    const selectors = [
+      'button[data-testid="stop-button"]',
+      'button[aria-label*="Stop generating"]',
+      'button[aria-label*="Остановить"]',
+      'button[aria-label*="Stop"]'
+    ];
+
+    return selectors.some((selector) => document.querySelector(selector));
+  }
+
+  function noteAttentionCandidate(key, text) {
+    if (!attentionCandidate || attentionCandidate.key !== key || attentionCandidate.text !== text) {
+      attentionCandidate = { key, text, since: Date.now() };
+      return false;
+    }
+
+    return Date.now() - attentionCandidate.since >= 2500;
+  }
+
+  function sendAttention(key, text) {
+    if (attentionSeen.has(key)) return;
+
+    chrome.runtime.sendMessage({
+      type: "GPTPS_ATTENTION_REQUIRED",
+      payload: {
+        type: "attention_required",
+        assistant_text: text.slice(0, 12000)
+      }
+    }, (response) => {
+      const runtimeError = chrome.runtime.lastError;
+      if (runtimeError || !response?.ok) {
+        console.warn("[GPTPS] attention event was not accepted by extension background", runtimeError?.message || response?.error || response);
+        return;
+      }
+
+      attentionSeen.add(key);
+      setBadge("GPT↔PS ATTENTION", "attention");
+    });
+  }
+
   async function scan() {
     if (busy) return;
 
@@ -63,10 +108,25 @@
     if (!last) return;
 
     const key = stableKey(last);
-    if (!key || seen.has(key)) return;
+    if (!key) return;
 
     const command = extractMarkedPowerShell(last);
-    if (!command) return;
+    if (!command) {
+      const full = textOf(last);
+      if (!full || attentionSeen.has(key) || key === initialAttentionKey) return;
+      if (isGenerating()) {
+        noteAttentionCandidate(key, full);
+        return;
+      }
+
+      if (noteAttentionCandidate(key, full)) {
+        sendAttention(key, full);
+      }
+      return;
+    }
+
+    attentionCandidate = null;
+    if (seen.has(key)) return;
 
     busy = true;
     setBadge("GPT↔PS SEND…", "sending");
@@ -269,4 +329,8 @@
     pointerEvents: "none"
   });
   document.documentElement.appendChild(badge);
+
+  const currentMessages = assistantMessages();
+  const currentLast = currentMessages[currentMessages.length - 1];
+  initialAttentionKey = currentLast ? stableKey(currentLast) : null;
 })();
