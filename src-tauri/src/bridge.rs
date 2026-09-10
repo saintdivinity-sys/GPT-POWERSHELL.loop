@@ -2,7 +2,7 @@ use crate::safety;
 use chrono::Utc;
 use futures_util::{stream::SplitSink, SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, process::Stdio, sync::Arc, time::Duration};
+use std::{collections::VecDeque, path::PathBuf, process::Stdio, sync::Arc, time::Duration};
 use tokio::{
     io::AsyncWriteExt,
     net::{TcpListener, TcpStream},
@@ -19,12 +19,22 @@ use uuid::Uuid;
 
 pub type SharedState = Arc<Mutex<BridgeState>>;
 
+#[derive(Debug, Clone, Serialize)]
+pub struct ConsoleEntry {
+    id: u64,
+    at: String,
+    kind: String,
+    text: String,
+}
+
 #[derive(Debug)]
 pub struct BridgeState {
     pub mode: String,
     pub port: u16,
     pub server_started: bool,
     pub timeout_seconds: u64,
+    console_log: VecDeque<ConsoleEntry>,
+    next_console_id: u64,
 }
 
 impl Default for BridgeState {
@@ -34,6 +44,8 @@ impl Default for BridgeState {
             port: 47177,
             server_started: false,
             timeout_seconds: 300,
+            console_log: VecDeque::new(),
+            next_console_id: 1,
         }
     }
 }
@@ -47,6 +59,33 @@ impl BridgeState {
             }
             _ => Err("invalid mode".into()),
         }
+    }
+
+    pub fn push_console(&mut self, kind: &str, text: impl Into<String>) {
+        let text = text.into();
+        if text.trim().is_empty() {
+            return;
+        }
+
+        self.console_log.push_back(ConsoleEntry {
+            id: self.next_console_id,
+            at: Utc::now().to_rfc3339(),
+            kind: kind.to_string(),
+            text,
+        });
+        self.next_console_id += 1;
+
+        while self.console_log.len() > 400 {
+            self.console_log.pop_front();
+        }
+    }
+
+    pub fn console_entries(&self) -> Vec<ConsoleEntry> {
+        self.console_log.iter().cloned().collect()
+    }
+
+    pub fn clear_console(&mut self) {
+        self.console_log.clear();
     }
 }
 
@@ -89,7 +128,9 @@ pub async fn serve(state: SharedState, port: u16) -> Result<(), String> {
         let (stream, _) = listener.accept().await.map_err(|error| error.to_string())?;
         let state = state.clone();
         tokio::spawn(async move {
-            if let Err(error) = handle_connection(state, stream).await {
+            if let Err(error) = handle_connection(state.clone(), stream).await {
+                let mut guard = state.lock().await;
+                guard.push_console("stderr", format!("WebSocket connection error: {error}"));
                 eprintln!("connection error: {error}");
             }
         });
@@ -112,6 +153,7 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
         let parsed: ClientMessage = match serde_json::from_str(message.to_text().unwrap_or("")) {
             Ok(value) => value,
             Err(error) => {
+                state.lock().await.push_console("stderr", format!("Protocol parse error: {error}"));
                 send_json(&mut sink, &ServerMessage::Error { message: error.to_string() }).await?;
                 continue;
             }
@@ -120,14 +162,17 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
         match parsed {
             ClientMessage::Hello { page_url } => {
                 if let Some(url) = page_url {
+                    state.lock().await.push_console("status", format!("Browser connected: {url}"));
                     eprintln!("browser connected: {url}");
                 }
             }
             ClientMessage::Ping => send_json(&mut sink, &ServerMessage::Pong).await?,
             ClientMessage::AssistantCommand { command, marker, assistant_text } => {
                 let _assistant_text = assistant_text;
+                state.lock().await.push_console("command", command.clone());
 
                 if marker != "GPTPS_EXEC" {
+                    state.lock().await.push_console("stderr", "Blocked: strict GPTPS_EXEC marker missing");
                     send_json(&mut sink, &ServerMessage::Blocked {
                         reason: "strict marker missing".into(),
                         level: "red".into(),
@@ -137,14 +182,15 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
 
                 let mode = state.lock().await.mode.clone();
                 if mode == "paused" || mode == "stopped" {
-                    send_json(&mut sink, &ServerMessage::Paused {
-                        reason: format!("bridge mode is {mode}"),
-                    }).await?;
+                    let reason = format!("bridge mode is {mode}");
+                    state.lock().await.push_console("status", format!("Not executed: {reason}"));
+                    send_json(&mut sink, &ServerMessage::Paused { reason }).await?;
                     continue;
                 }
 
                 let decision = safety::classify(&command);
                 if !decision.allowed {
+                    state.lock().await.push_console("stderr", format!("Blocked by safety gate: {}", decision.reason));
                     send_json(&mut sink, &ServerMessage::Blocked {
                         reason: decision.reason,
                         level: decision.level.into(),
@@ -152,18 +198,36 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
                     continue;
                 }
 
+                state.lock().await.push_console("status", format!("Running in mode: {mode}"));
                 let timeout_seconds = state.lock().await.timeout_seconds;
                 match run_powershell(&command, timeout_seconds).await {
                     Ok(result) => {
+                        if let ServerMessage::CommandResult { cycle_id, exit_code, stdout, stderr, .. } = &result {
+                            let mut guard = state.lock().await;
+                            guard.push_console("meta", format!("cycle_id: {cycle_id} · exit_code: {exit_code}"));
+                            if !stdout.trim().is_empty() {
+                                guard.push_console("stdout", stdout.clone());
+                            }
+                            if !stderr.trim().is_empty() {
+                                guard.push_console("stderr", stderr.clone());
+                            }
+                        }
+
                         append_session_log(&result).await.ok();
                         send_json(&mut sink, &result).await?;
 
                         if mode == "step" {
-                            state.lock().await.mode = "paused".into();
+                            let mut guard = state.lock().await;
+                            guard.mode = "paused".into();
+                            guard.push_console("status", "STEP complete → PAUSED");
                         }
                     }
                     Err(message) => {
-                        state.lock().await.mode = "paused".into();
+                        let mut guard = state.lock().await;
+                        guard.mode = "paused".into();
+                        guard.push_console("stderr", message.clone());
+                        guard.push_console("status", "Execution error → PAUSED");
+                        drop(guard);
                         send_json(&mut sink, &ServerMessage::Error { message }).await?;
                     }
                 }
