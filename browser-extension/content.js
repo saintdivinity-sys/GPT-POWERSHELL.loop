@@ -6,7 +6,7 @@
   let badge = null;
   let badgeVisible = true;
   let attentionCandidate = null;
-  let initialAttentionKey = null;
+  let commandCandidate = null;
 
   function textOf(element) {
     return (element?.innerText || element?.textContent || "").trim();
@@ -33,37 +33,77 @@
     applyBadgeVisibility();
   }
 
+  function assistantMessages() {
+    const roleNodes = [...document.querySelectorAll('[data-message-author-role="assistant"]')];
+    const messages = [];
+    const unique = new Set();
+
+    for (const node of roleNodes) {
+      const container = node.closest('article[data-testid^="conversation-turn-"]') || node;
+      if (unique.has(container)) continue;
+      unique.add(container);
+      messages.push(container);
+    }
+
+    return messages;
+  }
+
+  function stableKey(article) {
+    const ownMessageId = article.getAttribute?.("data-message-id");
+    if (ownMessageId) return `message:${ownMessageId}`;
+
+    const nestedMessageId = article.querySelector?.("[data-message-id]")?.getAttribute?.("data-message-id");
+    if (nestedMessageId) return `message:${nestedMessageId}`;
+
+    const testId = article.getAttribute?.("data-testid");
+    if (testId) return `turn:${testId}`;
+
+    const text = textOf(article);
+    let hash = 2166136261;
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return `fallback:${(hash >>> 0).toString(16)}:${text.length}`;
+  }
+
   function extractMarkedPowerShell(article) {
     const full = textOf(article);
-    if (!full.includes("GPTPS_EXEC")) return null;
+    const marker = "GPTPS_EXEC";
+    const markerIndex = full.indexOf(marker);
+    if (markerIndex < 0) return null;
 
-    const blocks = [...article.querySelectorAll("pre code, pre")];
+    // Only use actual code nodes. Bare <pre> may include ChatGPT's visual
+    // language header and was observed to execute the literal word "PowerShell".
+    const blocks = [...article.querySelectorAll("pre code")];
     for (const block of blocks) {
       const code = textOf(block);
       if (!code) continue;
 
+      const trimmed = code.trim();
+      if (/^(powershell|pwsh|shell|bash|cmd|command prompt)$/i.test(trimmed)) {
+        continue;
+      }
+
       const className = (block.className || "").toLowerCase();
+      const parentClass = (block.parentElement?.className || "").toLowerCase();
       const looksPowerShell =
         className.includes("powershell") ||
         className.includes("language-powershell") ||
-        /\b(Get-|Set-|New-|Test-|Invoke-|Start-|Stop-|Remove-|Copy-|Move-|Write-|cd\s|pwsh|powershell)\b/i.test(code);
+        parentClass.includes("powershell") ||
+        /\b(Get-|Set-|New-|Test-|Invoke-|Start-|Stop-|Remove-|Copy-|Move-|Write-|Out-|Select-|Where-|ForEach-|cmd\.exe|pwsh|powershell|\[Environment\]::)\b/i.test(code) ||
+        /\$[A-Za-z_][A-Za-z0-9_]*/.test(code);
 
-      if (looksPowerShell) return code;
+      if (!looksPowerShell) continue;
+
+      // The executable block must appear after GPTPS_EXEC in the same assistant turn.
+      const codeIndex = full.indexOf(trimmed, markerIndex + marker.length);
+      if (codeIndex < 0) continue;
+
+      return code;
     }
 
     return null;
-  }
-
-  function assistantMessages() {
-    return [...document.querySelectorAll(
-      'article[data-testid^="conversation-turn-"], [data-message-author-role="assistant"]'
-    )];
-  }
-
-  function stableKey(article) {
-    return article.getAttribute("data-testid") ||
-      article.getAttribute("data-message-id") ||
-      textOf(article).slice(0, 220);
   }
 
   function isGenerating() {
@@ -77,13 +117,15 @@
     return selectors.some((selector) => document.querySelector(selector));
   }
 
-  function noteAttentionCandidate(key, text) {
-    if (!attentionCandidate || attentionCandidate.key !== key || attentionCandidate.text !== text) {
-      attentionCandidate = { key, text, since: Date.now() };
-      return false;
+  function noteStableCandidate(current, next, requiredMs) {
+    if (!current || current.key !== next.key || current.text !== next.text || current.command !== next.command) {
+      return { stable: false, value: { ...next, since: Date.now() } };
     }
 
-    return Date.now() - attentionCandidate.since >= 2500;
+    return {
+      stable: Date.now() - current.since >= requiredMs,
+      value: current
+    };
   }
 
   function sendAttention(key, text) {
@@ -117,24 +159,34 @@
     const key = stableKey(last);
     if (!key) return;
 
+    const full = textOf(last);
     const command = extractMarkedPowerShell(last);
-    if (!command) {
-      const full = textOf(last);
-      if (!full || attentionSeen.has(key) || key === initialAttentionKey) return;
-      if (isGenerating()) {
-        noteAttentionCandidate(key, full);
-        return;
-      }
 
-      if (noteAttentionCandidate(key, full)) {
-        sendAttention(key, full);
-      }
+    if (!command) {
+      commandCandidate = null;
+      if (!full || attentionSeen.has(key) || seen.has(key)) return;
+
+      const next = { key, text: full, command: null };
+      const check = noteStableCandidate(attentionCandidate, next, 2500);
+      attentionCandidate = check.value;
+
+      if (isGenerating() || !check.stable) return;
+      sendAttention(key, full);
       return;
     }
 
     attentionCandidate = null;
     if (seen.has(key)) return;
 
+    const next = { key, text: full, command };
+    const check = noteStableCandidate(commandCandidate, next, 1500);
+    commandCandidate = check.value;
+
+    // Do not execute during streaming. The complete assistant turn must also
+    // remain unchanged for 1.5 seconds before being eligible.
+    if (isGenerating() || !check.stable) return;
+
+    commandCandidate = null;
     busy = true;
     setBadge("GPT↔PS SEND…", "sending");
 
@@ -144,7 +196,7 @@
         type: "assistant_command",
         marker: "GPTPS_EXEC",
         command,
-        assistant_text: textOf(last).slice(0, 12000)
+        assistant_text: full.slice(0, 12000)
       }
     }, (response) => {
       const runtimeError = chrome.runtime.lastError;
@@ -349,7 +401,12 @@
     applyBadgeVisibility();
   });
 
-  const currentMessages = assistantMessages();
-  const currentLast = currentMessages[currentMessages.length - 1];
-  initialAttentionKey = currentLast ? stableKey(currentLast) : null;
+  // Everything already on the page when the extension starts is history.
+  // Baseline it so extension reload/page refresh cannot replay an old command.
+  for (const message of assistantMessages()) {
+    const key = stableKey(message);
+    if (!key) continue;
+    seen.add(key);
+    attentionSeen.add(key);
+  }
 })();
