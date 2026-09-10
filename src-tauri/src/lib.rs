@@ -91,6 +91,7 @@ async fn show_alert_overlay(app: tauri::AppHandle, kind: String) -> Result<usize
         .focused(false)
         .focusable(false)
         .transparent(true)
+        .background_color(tauri::webview::Color(0, 0, 0, 0))
         .shadow(false)
         .initialization_script(init_script.clone())
         .build()
