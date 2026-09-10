@@ -98,6 +98,9 @@ enum ClientMessage {
         marker: String,
         assistant_text: Option<String>,
     },
+    AttentionRequired {
+        assistant_text: Option<String>,
+    },
     Ping,
 }
 
@@ -130,7 +133,7 @@ pub async fn serve(state: SharedState, port: u16) -> Result<(), String> {
         tokio::spawn(async move {
             if let Err(error) = handle_connection(state.clone(), stream).await {
                 let mut guard = state.lock().await;
-                guard.push_console("stderr", format!("WebSocket connection error: {error}"));
+                guard.push_console("critical", format!("WebSocket connection error: {error}"));
                 eprintln!("connection error: {error}");
             }
         });
@@ -153,7 +156,7 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
         let parsed: ClientMessage = match serde_json::from_str(message.to_text().unwrap_or("")) {
             Ok(value) => value,
             Err(error) => {
-                state.lock().await.push_console("stderr", format!("Protocol parse error: {error}"));
+                state.lock().await.push_console("critical", format!("Protocol parse error: {error}"));
                 send_json(&mut sink, &ServerMessage::Error { message: error.to_string() }).await?;
                 continue;
             }
@@ -167,12 +170,28 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
                 }
             }
             ClientMessage::Ping => send_json(&mut sink, &ServerMessage::Pong).await?,
+            ClientMessage::AttentionRequired { assistant_text } => {
+                let mut guard = state.lock().await;
+                if guard.mode == "step" || guard.mode == "auto_safe" {
+                    guard.mode = "paused".into();
+                    guard.push_console(
+                        "attention",
+                        "ChatGPT requires attention: no GPTPS_EXEC command was provided. Loop paused.",
+                    );
+                    if let Some(text) = assistant_text {
+                        let summary = text.trim().replace('\n', " ");
+                        if !summary.is_empty() {
+                            guard.push_console("meta", format!("Assistant: {}", summary.chars().take(240).collect::<String>()));
+                        }
+                    }
+                }
+            }
             ClientMessage::AssistantCommand { command, marker, assistant_text } => {
                 let _assistant_text = assistant_text;
                 state.lock().await.push_console("command", command.clone());
 
                 if marker != "GPTPS_EXEC" {
-                    state.lock().await.push_console("stderr", "Blocked: strict GPTPS_EXEC marker missing");
+                    state.lock().await.push_console("critical", "Blocked: strict GPTPS_EXEC marker missing");
                     send_json(&mut sink, &ServerMessage::Blocked {
                         reason: "strict marker missing".into(),
                         level: "red".into(),
@@ -190,7 +209,10 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
 
                 let decision = safety::classify(&command);
                 if !decision.allowed {
-                    state.lock().await.push_console("stderr", format!("Blocked by safety gate: {}", decision.reason));
+                    let mut guard = state.lock().await;
+                    guard.mode = "paused".into();
+                    guard.push_console("critical", format!("Blocked by safety gate: {}", decision.reason));
+                    drop(guard);
                     send_json(&mut sink, &ServerMessage::Blocked {
                         reason: decision.reason,
                         level: decision.level.into(),
@@ -202,7 +224,9 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
                 let timeout_seconds = state.lock().await.timeout_seconds;
                 match run_powershell(&command, timeout_seconds).await {
                     Ok(result) => {
+                        let mut failed = false;
                         if let ServerMessage::CommandResult { cycle_id, exit_code, stdout, stderr, .. } = &result {
+                            failed = *exit_code != 0;
                             let mut guard = state.lock().await;
                             guard.push_console("meta", format!("cycle_id: {cycle_id} · exit_code: {exit_code}"));
                             if !stdout.trim().is_empty() {
@@ -211,22 +235,24 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
                             if !stderr.trim().is_empty() {
                                 guard.push_console("stderr", stderr.clone());
                             }
+
+                            if mode == "step" {
+                                guard.mode = "paused".into();
+                                guard.push_console("status", "STEP complete → PAUSED");
+                            } else if failed {
+                                guard.mode = "paused".into();
+                                guard.push_console("status", "Command failed → PAUSED");
+                            }
                         }
 
                         append_session_log(&result).await.ok();
                         send_json(&mut sink, &result).await?;
-
-                        if mode == "step" {
-                            let mut guard = state.lock().await;
-                            guard.mode = "paused".into();
-                            guard.push_console("status", "STEP complete → PAUSED");
-                        }
                     }
                     Err(message) => {
                         let mut guard = state.lock().await;
                         guard.mode = "paused".into();
-                        guard.push_console("stderr", message.clone());
-                        guard.push_console("status", "Execution error → PAUSED");
+                        guard.push_console("critical", message.clone());
+                        guard.push_console("status", "Execution failure → PAUSED");
                         drop(guard);
                         send_json(&mut sink, &ServerMessage::Error { message }).await?;
                     }
@@ -294,6 +320,33 @@ fn clean_powershell_stdout(raw: &str) -> String {
     cleaned.join("\n").trim().to_string()
 }
 
+fn clean_powershell_stderr(raw: &str) -> String {
+    const INTERNAL_EXIT_LINE: &str = "if ($null -eq $LASTEXITCODE) { exit 0 } else { exit $LASTEXITCODE }";
+    let normalized = raw.replace("\r\n", "\n").replace('\r', "\n");
+    let mut cleaned = Vec::new();
+
+    for line in normalized.lines() {
+        let trimmed = line.trim();
+
+        if trimmed == "PowerShell" {
+            continue;
+        }
+
+        if line.contains(INTERNAL_EXIT_LINE) {
+            if let Some((_, remainder)) = line.split_once(" : ") {
+                if !remainder.trim().is_empty() {
+                    cleaned.push(remainder.to_string());
+                }
+            }
+            continue;
+        }
+
+        cleaned.push(line.to_string());
+    }
+
+    cleaned.join("\n").trim().to_string()
+}
+
 async fn run_powershell(command: &str, timeout_seconds: u64) -> Result<ServerMessage, String> {
     let cycle_id = Uuid::new_v4().to_string();
     let started = Utc::now();
@@ -315,12 +368,13 @@ async fn run_powershell(command: &str, timeout_seconds: u64) -> Result<ServerMes
     let finished = Utc::now();
     let exit_code = output.status.code().unwrap_or(-1);
     let stdout_raw = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr_raw = String::from_utf8_lossy(&output.stderr).to_string();
 
     Ok(ServerMessage::CommandResult {
         cycle_id,
         exit_code,
         stdout: clean_powershell_stdout(&stdout_raw),
-        stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+        stderr: clean_powershell_stderr(&stderr_raw),
         started_at: started.to_rfc3339(),
         finished_at: finished.to_rfc3339(),
     })
