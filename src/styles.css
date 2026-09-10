@@ -11,7 +11,11 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 h1 { margin: 0; font-size: 28px; }
 h2 { margin-top: 0; font-size: 16px; }
 .eyebrow { margin: 0 0 6px; font-size: 11px; letter-spacing: .14em; color: #8e9aa7; }
+.headerControls { display: flex; align-items: center; gap: 10px; }
 .pill { padding: 7px 10px; border: 1px solid #33404b; border-radius: 999px; font-size: 11px; }
+.soundToggle { margin: 0; padding: 7px 10px; border-radius: 999px; font-size: 11px; letter-spacing: .02em; }
+.soundToggle.on { border-color: #3f6a52; background: #1a3326; color: #c9f5d7; }
+.soundToggle.off { border-color: #4b5057; background: #22272d; color: #a7b0ba; }
 .hero, article, .collapsible { border: 1px solid #28323d; background: #151a21; border-radius: 14px; }
 .hero { margin: 24px 0; padding: 18px; display: flex; align-items: center; gap: 12px; }
 .hero p { margin: 4px 0 0; color: #95a0ad; }
@@ -26,6 +30,7 @@ button:disabled { cursor: default; opacity: .72; }
 button.danger { border-color: #68404a; background: #39242a; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .hint { color: #8f9aa6; font-size: 13px; line-height: 1.5; }
+.soundLegend { margin: 8px 0 0; color: #74808c; font-size: 11px; line-height: 1.45; }
 pre { overflow: auto; padding: 14px; border-radius: 9px; background: #0c1015; color: #c7d3df; }
 
 .collapsible { margin-top: 16px; overflow: hidden; }
@@ -101,9 +106,15 @@ pre { overflow: auto; padding: 14px; border-radius: 9px; background: #0c1015; co
 .consoleEntry.status .consoleEntryText { color: #d8c58f; }
 .consoleEntry.meta { border-left-color: #6f7882; }
 .consoleEntry.meta .consoleEntryText { color: #9aa7b4; }
+.consoleEntry.attention { border-left-color: #d3a33f; background: rgba(105,72,12,.20); }
+.consoleEntry.attention .consoleEntryText { color: #ffd98b; font-weight: 650; }
+.consoleEntry.critical { border-left-color: #ff5968; background: rgba(120,20,31,.24); box-shadow: inset 0 0 0 1px rgba(255,89,104,.08); }
+.consoleEntry.critical .consoleEntryText { color: #ffabb3; font-weight: 700; }
 
 @media (max-width: 720px) {
   .grid { grid-template-columns: 1fr; }
   .app { padding: 18px; }
   .consoleToolbar { flex-direction: column; }
+  header { align-items: flex-start; }
+  .headerControls { flex-direction: column-reverse; align-items: flex-end; }
 }
