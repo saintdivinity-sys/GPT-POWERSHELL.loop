@@ -1,7 +1,7 @@
 mod bridge;
 mod safety;
 
-use bridge::{BridgeState, SharedState};
+use bridge::{BridgeState, ConsoleEntry, SharedState};
 use serde::Serialize;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -17,7 +17,9 @@ struct BridgeSnapshot {
 #[tauri::command]
 async fn set_mode(state: tauri::State<'_, SharedState>, mode: String) -> Result<(), String> {
     let mut guard = state.lock().await;
-    guard.set_mode(&mode)
+    guard.set_mode(&mode)?;
+    guard.push_console("status", format!("Mode changed → {mode}"));
+    Ok(())
 }
 
 #[tauri::command]
@@ -29,6 +31,19 @@ async fn get_state(state: tauri::State<'_, SharedState>) -> Result<BridgeSnapsho
         server_started: guard.server_started,
         timeout_seconds: guard.timeout_seconds,
     })
+}
+
+#[tauri::command]
+async fn get_console_log(state: tauri::State<'_, SharedState>) -> Result<Vec<ConsoleEntry>, String> {
+    let guard = state.lock().await;
+    Ok(guard.console_entries())
+}
+
+#[tauri::command]
+async fn clear_console_log(state: tauri::State<'_, SharedState>) -> Result<(), String> {
+    let mut guard = state.lock().await;
+    guard.clear_console();
+    Ok(())
 }
 
 #[tauri::command]
@@ -46,11 +61,14 @@ async fn start_bridge(
         if guard.mode == "stopped" {
             guard.mode = "step".into();
         }
+        let mode = guard.mode.clone();
+        guard.push_console("status", format!("Bridge listening on ws://127.0.0.1:{port} · Mode: {mode}"));
     }
 
     let cloned = state.inner().clone();
     tauri::async_runtime::spawn(async move {
-        if let Err(error) = bridge::serve(cloned, port).await {
+        if let Err(error) = bridge::serve(cloned.clone(), port).await {
+            cloned.lock().await.push_console("stderr", format!("Bridge server error: {error}"));
             eprintln!("bridge server error: {error}");
         }
     });
@@ -63,7 +81,13 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(shared)
-        .invoke_handler(tauri::generate_handler![set_mode, get_state, start_bridge])
+        .invoke_handler(tauri::generate_handler![
+            set_mode,
+            get_state,
+            get_console_log,
+            clear_console_log,
+            start_bridge
+        ])
         .run(tauri::generate_context!())
         .expect("error while running GPT-POWERSHELL.loop");
 }
