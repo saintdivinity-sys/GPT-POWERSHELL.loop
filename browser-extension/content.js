@@ -1,6 +1,7 @@
 (() => {
   const seen = new Set();
   const attentionSeen = new Set();
+  const ATTENTION_STABLE_MS = 4000;
   let busy = false;
   let scanTimer = null;
   let badge = null;
@@ -128,14 +129,15 @@
     };
   }
 
-  function sendAttention(key, text) {
+  function sendAttention(key, text, observedAtMs) {
     if (attentionSeen.has(key)) return;
 
     chrome.runtime.sendMessage({
       type: "GPTPS_ATTENTION_REQUIRED",
       payload: {
         type: "attention_required",
-        assistant_text: text.slice(0, 12000)
+        assistant_text: text.slice(0, 12000),
+        observed_at_ms: observedAtMs
       }
     }, (response) => {
       const runtimeError = chrome.runtime.lastError;
@@ -167,11 +169,11 @@
       if (!full || attentionSeen.has(key) || seen.has(key)) return;
 
       const next = { key, text: full, command: null };
-      const check = noteStableCandidate(attentionCandidate, next, 2500);
+      const check = noteStableCandidate(attentionCandidate, next, ATTENTION_STABLE_MS);
       attentionCandidate = check.value;
 
       if (isGenerating() || !check.stable) return;
-      sendAttention(key, full);
+      sendAttention(key, full, check.value.since);
       return;
     }
 
