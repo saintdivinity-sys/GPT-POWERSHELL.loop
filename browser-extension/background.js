@@ -85,7 +85,9 @@ chrome.runtime.onInstalled.addListener(connect);
 chrome.runtime.onStartup.addListener(connect);
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type !== "GPTPS_ASSISTANT_COMMAND") return;
+  const isCommand = message?.type === "GPTPS_ASSISTANT_COMMAND";
+  const isAttention = message?.type === "GPTPS_ATTENTION_REQUIRED";
+  if (!isCommand && !isAttention) return;
 
   connect();
 
@@ -101,7 +103,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
 
-    pendingTabIds.push(tabId);
+    if (isCommand) {
+      pendingTabIds.push(tabId);
+    }
+
     socket.send(JSON.stringify(message.payload));
     sendResponse({ ok: true, tab_id: tabId });
   };
