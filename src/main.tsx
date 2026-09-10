@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import "./styles.css";
 
 type Mode = "step" | "auto_safe" | "paused" | "stopped";
+type AlertSound = "error" | "attention" | "critical";
 
 type BridgeSnapshot = {
   mode: Mode;
@@ -15,7 +16,7 @@ type BridgeSnapshot = {
 type ConsoleEntry = {
   id: number;
   at: string;
-  kind: "command" | "stdout" | "stderr" | "status" | "meta" | string;
+  kind: "command" | "stdout" | "stderr" | "status" | "meta" | "attention" | "critical" | string;
   text: string;
 };
 
@@ -25,7 +26,76 @@ function App() {
   const [port, setPort] = React.useState(47177);
   const [serverStarted, setServerStarted] = React.useState(false);
   const [consoleEntries, setConsoleEntries] = React.useState<ConsoleEntry[]>([]);
+  const [soundEnabled, setSoundEnabled] = React.useState(() => localStorage.getItem("gptps_sound_enabled") !== "off");
   const consoleEndRef = React.useRef<HTMLDivElement | null>(null);
+  const audioContextRef = React.useRef<AudioContext | null>(null);
+  const soundBaselineReadyRef = React.useRef(false);
+  const lastSoundEntryIdRef = React.useRef(0);
+
+  const ensureAudioReady = React.useCallback(async () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
+
+    if (audioContextRef.current.state === "suspended") {
+      await audioContextRef.current.resume();
+    }
+
+    return audioContextRef.current;
+  }, []);
+
+  const playAlertSound = React.useCallback(async (kind: AlertSound) => {
+    if (!soundEnabled) return;
+
+    let context: AudioContext;
+    try {
+      context = await ensureAudioReady();
+    } catch {
+      return;
+    }
+
+    const now = context.currentTime + 0.02;
+
+    const tone = (
+      frequency: number,
+      offset: number,
+      duration: number,
+      volume: number,
+      type: OscillatorType = "sine"
+    ) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const start = now + offset;
+      const end = start + duration;
+
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(volume, start + Math.min(0.045, duration * 0.25));
+      gain.gain.exponentialRampToValueAtTime(0.0001, end);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(start);
+      oscillator.stop(end + 0.03);
+    };
+
+    if (kind === "error") {
+      tone(523.25, 0.00, 0.24, 0.035, "sine");
+      tone(392.00, 0.26, 0.34, 0.038, "sine");
+      return;
+    }
+
+    if (kind === "attention") {
+      tone(523.25, 0.00, 0.22, 0.030, "sine");
+      tone(659.25, 0.20, 0.25, 0.032, "sine");
+      tone(783.99, 0.42, 0.34, 0.028, "sine");
+      return;
+    }
+
+    tone(261.63, 0.00, 0.30, 0.040, "triangle");
+    tone(523.25, 0.28, 0.30, 0.040, "triangle");
+    tone(329.63, 0.56, 0.42, 0.043, "triangle");
+  }, [ensureAudioReady, soundEnabled]);
 
   const syncState = React.useCallback(async () => {
     try {
@@ -59,8 +129,47 @@ function App() {
     consoleEndRef.current?.scrollIntoView({ block: "end" });
   }, [consoleEntries]);
 
+  React.useEffect(() => {
+    const maxId = consoleEntries.reduce((max, entry) => Math.max(max, entry.id), 0);
+
+    if (!soundBaselineReadyRef.current) {
+      lastSoundEntryIdRef.current = maxId;
+      soundBaselineReadyRef.current = true;
+      return;
+    }
+
+    const fresh = consoleEntries.filter((entry) => entry.id > lastSoundEntryIdRef.current);
+    lastSoundEntryIdRef.current = maxId;
+    if (!soundEnabled || fresh.length === 0) return;
+
+    let requested: AlertSound | null = null;
+
+    for (const entry of fresh) {
+      if (entry.kind === "critical") {
+        requested = "critical";
+        break;
+      }
+
+      if (entry.kind === "attention") {
+        requested = "attention";
+        continue;
+      }
+
+      const exitMatch = entry.kind === "meta" ? entry.text.match(/exit_code:\s*(-?\d+)/i) : null;
+      const nonZeroExit = exitMatch ? Number(exitMatch[1]) !== 0 : false;
+      if (!requested && (entry.kind === "stderr" || nonZeroExit)) {
+        requested = "error";
+      }
+    }
+
+    if (requested) {
+      void playAlertSound(requested);
+    }
+  }, [consoleEntries, playAlertSound, soundEnabled]);
+
   async function setBridgeMode(next: Mode) {
     try {
+      if (soundEnabled) await ensureAudioReady();
       await invoke("set_mode", { mode: next });
       await syncState();
     } catch (error) {
@@ -70,6 +179,7 @@ function App() {
 
   async function startBridge() {
     try {
+      if (soundEnabled) await ensureAudioReady();
       await invoke<string>("start_bridge", { port });
       await syncState();
     } catch (error) {
@@ -86,6 +196,19 @@ function App() {
     }
   }
 
+  async function toggleSound() {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    localStorage.setItem("gptps_sound_enabled", next ? "on" : "off");
+    if (next) {
+      try {
+        await ensureAudioReady();
+      } catch {
+        // The next user interaction can unlock audio if WebView2 suspended it.
+      }
+    }
+  }
+
   return (
     <main className="app">
       <header>
@@ -93,7 +216,17 @@ function App() {
           <p className="eyebrow">LOCAL WINDOWS BRIDGE</p>
           <h1>GPT-POWERSHELL.loop</h1>
         </div>
-        <span className={`pill ${mode}`}>{mode.toUpperCase()}</span>
+        <div className="headerControls">
+          <button
+            className={`soundToggle ${soundEnabled ? "on" : "off"}`}
+            onClick={toggleSound}
+            aria-pressed={soundEnabled}
+            title="Sound alerts: PowerShell error, ChatGPT attention, critical bridge event"
+          >
+            {soundEnabled ? "🔊 SOUND ON" : "🔇 SOUND OFF"}
+          </button>
+          <span className={`pill ${mode}`}>{mode.toUpperCase()}</span>
+        </div>
       </header>
 
       <section className="hero">
@@ -134,6 +267,7 @@ function App() {
           <p className="hint">
             v0.1 always requires the strict GPTPS_EXEC marker. Unmarked assistant code is ignored.
           </p>
+          <p className="soundLegend">Sound alerts: error · attention required · critical bridge/safety event</p>
         </article>
       </section>
 
