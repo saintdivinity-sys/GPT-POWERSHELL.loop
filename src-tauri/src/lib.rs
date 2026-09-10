@@ -137,7 +137,7 @@ async fn start_bridge(
         guard.port = port;
         guard.server_started = true;
         if guard.mode == "stopped" {
-            guard.mode = "step".into();
+            guard.set_mode("step")?;
         }
         let mode = guard.mode.clone();
         guard.push_console("status", format!("Bridge listening on ws://127.0.0.1:{port} · Mode: {mode}"));
