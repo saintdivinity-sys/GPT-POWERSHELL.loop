@@ -184,6 +184,23 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
             ClientMessage::Ping => send_json(&mut sink, &ServerMessage::Pong).await?,
             ClientMessage::AttentionRequired { assistant_text, observed_at_ms } => {
                 let mut guard = state.lock().await;
+
+                let assistant_has_gp_marker = assistant_text
+                    .as_deref()
+                    .map(|text| text.contains("GPTPS_EXEC") || text.contains("GPTPS_HIGH"))
+                    .unwrap_or(false);
+
+                // App-side fail-safe: a turn that visibly contains a strict GP
+                // marker is a command turn, so a stale/legacy extension must
+                // never be allowed to turn it into blocking ATTENTION.
+                if assistant_has_gp_marker {
+                    guard.push_console(
+                        "meta",
+                        "Ignored ATTENTION because assistant text contains GPTPS_EXEC/GPTPS_HIGH marker.",
+                    );
+                    continue;
+                }
+
                 if !guard.high_active && (guard.mode == "step" || guard.mode == "auto_safe") {
                     let stale = match (observed_at_ms, guard.attention_armed_at_ms) {
                         (Some(observed), Some(armed)) => observed < armed,
@@ -215,7 +232,11 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
             }
             ClientMessage::AssistantCommand { command, marker, assistant_text } => {
                 let _assistant_text = assistant_text;
-                state.lock().await.push_console("command", command.clone());
+                {
+                    let mut guard = state.lock().await;
+                    guard.push_console("meta", format!("RX command marker: {marker}"));
+                    guard.push_console("command", command.clone());
+                }
 
                 let is_high = marker == "GPTPS_HIGH";
                 if marker != "GPTPS_EXEC" && !is_high {
