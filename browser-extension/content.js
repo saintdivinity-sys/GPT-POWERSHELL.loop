@@ -70,9 +70,13 @@
 
   function extractMarkedPowerShell(article) {
     const full = textOf(article);
-    const marker = "GPTPS_EXEC";
-    const markerIndex = full.indexOf(marker);
-    if (markerIndex < 0) return null;
+    const markerCandidates = ["GPTPS_EXEC", "GPTPS_HIGH"]
+      .map((marker) => ({ marker, index: full.indexOf(marker) }))
+      .filter((entry) => entry.index >= 0)
+      .sort((a, b) => a.index - b.index);
+
+    if (markerCandidates.length === 0) return null;
+    const { marker, index: markerIndex } = markerCandidates[0];
 
     // Only use actual code nodes. Bare <pre> may include ChatGPT's visual
     // language header and was observed to execute the literal word "PowerShell".
@@ -82,9 +86,7 @@
       if (!code) continue;
 
       const trimmed = code.trim();
-      if (/^(powershell|pwsh|shell|bash|cmd|command prompt)$/i.test(trimmed)) {
-        continue;
-      }
+      if (/^(powershell|pwsh|shell|bash|cmd|command prompt)$/i.test(trimmed)) continue;
 
       const className = (block.className || "").toLowerCase();
       const parentClass = (block.parentElement?.className || "").toLowerCase();
@@ -96,12 +98,9 @@
         /\$[A-Za-z_][A-Za-z0-9_]*/.test(code);
 
       if (!looksPowerShell) continue;
-
-      // The executable block must appear after GPTPS_EXEC in the same assistant turn.
       const codeIndex = full.indexOf(trimmed, markerIndex + marker.length);
       if (codeIndex < 0) continue;
-
-      return code;
+      return { command: code, marker };
     }
 
     return null;
@@ -119,7 +118,7 @@
   }
 
   function noteStableCandidate(current, next, requiredMs) {
-    if (!current || current.key !== next.key || current.text !== next.text || current.command !== next.command) {
+    if (!current || current.key !== next.key || current.text !== next.text || current.command !== next.command || current.marker !== next.marker) {
       return { stable: false, value: { ...next, since: Date.now() } };
     }
 
@@ -162,9 +161,9 @@
     if (!key) return;
 
     const full = textOf(last);
-    const command = extractMarkedPowerShell(last);
+    const marked = extractMarkedPowerShell(last);
 
-    if (!command) {
+    if (!marked) {
       commandCandidate = null;
       if (!full || attentionSeen.has(key) || seen.has(key)) return;
 
@@ -180,7 +179,8 @@
     attentionCandidate = null;
     if (seen.has(key)) return;
 
-    const next = { key, text: full, command };
+    const { command, marker } = marked;
+    const next = { key, text: full, command, marker };
     const check = noteStableCandidate(commandCandidate, next, 1500);
     commandCandidate = check.value;
 
@@ -190,13 +190,13 @@
 
     commandCandidate = null;
     busy = true;
-    setBadge("GPT↔PS SEND…", "sending");
+    setBadge(marker === "GPTPS_HIGH" ? "GPT↔PS HIGH…" : "GPT↔PS SEND…", marker === "GPTPS_HIGH" ? "error" : "sending");
 
     chrome.runtime.sendMessage({
       type: "GPTPS_ASSISTANT_COMMAND",
       payload: {
         type: "assistant_command",
-        marker: "GPTPS_EXEC",
+        marker,
         command,
         assistant_text: full.slice(0, 12000)
       }

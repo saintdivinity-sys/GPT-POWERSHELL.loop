@@ -13,6 +13,8 @@ h2 { margin-top: 0; font-size: 16px; }
 .eyebrow { margin: 0 0 6px; font-size: 11px; letter-spacing: .14em; color: #8e9aa7; }
 .headerControls { display: flex; align-items: center; gap: 10px; }
 .pill { padding: 7px 10px; border: 1px solid #33404b; border-radius: 999px; font-size: 11px; }
+.pill.high { border-color: #d94d5c; background: #4a1f26; color: #ff9aa5; box-shadow: 0 0 14px rgba(225, 52, 72, .24); font-weight: 800; }
+.statusDot.high { background: #ef4e5f; box-shadow: 0 0 12px rgba(239, 78, 95, .55); }
 .soundControlWrap { position: relative; display: flex; align-items: center; z-index: 20; }
 .soundToggle { margin: 0; padding: 7px 10px; border-radius: 999px; font-size: 11px; letter-spacing: .02em; }
 .soundToggle.on { border-color: #3f6a52; background: #1a3326; color: #c9f5d7; }

@@ -17,6 +17,7 @@ type BridgeSnapshot = {
   port: number;
   server_started: boolean;
   timeout_seconds: number;
+  high_active: boolean;
 };
 
 type ConsoleEntry = {
@@ -42,6 +43,7 @@ function App() {
   const [status, setStatus] = React.useState("Bridge offline");
   const [port, setPort] = React.useState(47177);
   const [serverStarted, setServerStarted] = React.useState(false);
+  const [highActive, setHighActive] = React.useState(false);
   const [consoleEntries, setConsoleEntries] = React.useState<ConsoleEntry[]>([]);
   const [soundEnabled, setSoundEnabled] = React.useState(() => localStorage.getItem("gptps_sound_enabled") !== "off");
   const [soundMenuOpen, setSoundMenuOpen] = React.useState(false);
@@ -152,11 +154,14 @@ function App() {
 
       setMode(snapshot.mode);
       setServerStarted(snapshot.server_started);
+      setHighActive(snapshot.high_active);
       setPort(snapshot.port);
       setConsoleEntries(entries);
 
       if (snapshot.server_started) {
-        setStatus(`Listening on ws://127.0.0.1:${snapshot.port} · Mode: ${snapshot.mode}`);
+        setStatus(snapshot.high_active
+          ? `Listening on ws://127.0.0.1:${snapshot.port} · Execution: HIGH · Base mode: ${snapshot.mode}`
+          : `Listening on ws://127.0.0.1:${snapshot.port} · Mode: ${snapshot.mode}`);
       } else {
         setStatus(snapshot.mode === "stopped" ? "Bridge offline" : `Mode: ${snapshot.mode}`);
       }
@@ -291,6 +296,8 @@ function App() {
     }
   }
 
+  const displayMode = highActive ? "high" : mode;
+
   return (
     <main className="app">
       <header>
@@ -323,12 +330,12 @@ function App() {
               </div>
             )}
           </div>
-          <span className={`pill ${mode}`}>{mode.toUpperCase()}</span>
+          <span className={`pill ${displayMode}`}>{displayMode.toUpperCase()}</span>
         </div>
       </header>
 
       <section className="hero">
-        <div className="statusDot" />
+        <div className={`statusDot ${highActive ? "high" : ""}`} />
         <div>
           <strong>{status}</strong>
           <p>ChatGPT ↔ PowerShell round-trip controller</p>
@@ -363,7 +370,7 @@ function App() {
             <button className="danger" onClick={() => setBridgeMode("stopped")}>STOP</button>
           </div>
           <p className="hint">
-            v0.1 always requires the strict GPTPS_EXEC marker. Unmarked assistant code is ignored.
+            v0.1 requires a strict GPTPS_EXEC or GPTPS_HIGH marker. Unmarked assistant code is ignored.
           </p>
           <p className="soundLegend">Sound alerts: error · attention required · critical bridge/safety event</p>
         </article>
@@ -375,7 +382,7 @@ function App() {
           <span className="summaryHint">show / hide</span>
         </summary>
         <div className="collapsibleBody">
-          <pre>{`GPTPS_EXEC\n\`\`\`powershell\nGet-ChildItem\n\`\`\``}</pre>
+          <pre>{`GPTPS_EXEC\n\`\`\`powershell\nGet-ChildItem\n\`\`\`\n\nGPTPS_HIGH\n\`\`\`powershell\n& .\\LongBuild.ps1\n\`\`\``}</pre>
         </div>
       </details>
 

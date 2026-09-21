@@ -44,7 +44,7 @@ ChatGPT composer
 
 ## Execution protocol
 
-By default, the app executes only an explicitly marked assistant block:
+The app executes only explicitly marked assistant blocks. Normal execution uses `GPTPS_EXEC`:
 
 ````markdown
 GPTPS_EXEC
@@ -55,6 +55,8 @@ Get-ChildItem
 
 Unmarked examples and code blocks are ignored.
 
+Long-running execution uses `GPTPS_HIGH` with the same single PowerShell code-block format. HIGH opens a separate visible Windows PowerShell window, has no normal bridge command timeout, captures the completed output, sends it back through the same result path, closes the external PowerShell window, and then reveals the underlying STEP/AUTO SAFE/PAUSE/STOP mode again.
+
 The bridge then:
 
 1. checks the safety policy;
@@ -63,7 +65,8 @@ The bridge then:
 4. sends a structured result back to the extension;
 5. the extension inserts that result into ChatGPT;
 6. **STEP** pauses after one round-trip;
-7. **AUTO SAFE** waits for the next marked command and continues.
+7. **AUTO SAFE** waits for the next marked command and continues, including after a normal non-zero command exit;
+8. **HIGH** is a temporary execution state layered over the current loop mode, not a persistent fifth mode.
 
 ## Safety model
 
@@ -83,8 +86,8 @@ The safety layer blocks high-risk patterns including destructive disk, boot, reg
 - Tauri 2 + React + TypeScript desktop shell
 - Rust local WebSocket bridge
 - PowerShell `stdout` / `stderr` capture
-- strict `GPTPS_EXEC` marker
-- STEP / AUTO SAFE / PAUSE / STOP
+- strict `GPTPS_EXEC` and `GPTPS_HIGH` markers
+- STEP / AUTO SAFE / PAUSE / STOP + temporary HIGH execution state
 - basic command risk classification
 - command timeout
 - JSONL session logs

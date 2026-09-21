@@ -14,6 +14,7 @@ struct BridgeSnapshot {
     port: u16,
     server_started: bool,
     timeout_seconds: u64,
+    high_active: bool,
 }
 
 #[tauri::command]
@@ -32,6 +33,7 @@ async fn get_state(state: tauri::State<'_, SharedState>) -> Result<BridgeSnapsho
         port: guard.port,
         server_started: guard.server_started,
         timeout_seconds: guard.timeout_seconds,
+        high_active: guard.high_active,
     })
 }
 
