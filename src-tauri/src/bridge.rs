@@ -298,9 +298,10 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
                                     }
                                 }
                             } else {
+                                let current_mode = guard.mode.clone();
                                 guard.push_console(
                                     "meta",
-                                    format!("Mode changed while command was running; keeping current mode: {}", guard.mode),
+                                    format!("Mode changed while command was running; keeping current mode: {current_mode}"),
                                 );
                             }
                         }
