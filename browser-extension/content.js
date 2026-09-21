@@ -99,8 +99,13 @@
         /\$[A-Za-z_][A-Za-z0-9_]*/.test(code);
 
       if (!looksPowerShell) continue;
-      const codeIndex = full.indexOf(trimmed, markerIndex + marker.length);
-      if (codeIndex < 0) continue;
+
+      // The assistant article already scopes us to one response. Matching the
+      // code block back into article.innerText with indexOf() is brittle
+      // because ChatGPT can normalize whitespace/text differently between the
+      // rendered code node and the article text. Once a strict GP marker is
+      // present in this same assistant turn, accept the first plausible
+      // PowerShell code block from that turn directly.
       return { command: code, marker };
     }
 
