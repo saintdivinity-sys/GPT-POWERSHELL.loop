@@ -3,6 +3,9 @@
   const attentionSeen = new Set();
   const ATTENTION_STABLE_MS = 4000;
   const MARKER_RENDER_GRACE_MS = 15000;
+  const STARTUP_BASELINE_MS = 6000;
+  const startupBaselineUntil = Date.now() + STARTUP_BASELINE_MS;
+  let startupBaselineActive = true;
   let busy = false;
   let scanTimer = null;
   let badge = null;
@@ -170,6 +173,30 @@
 
   async function scan() {
     if (busy) return;
+
+    // ChatGPT hydrates conversation history asynchronously after a page or
+    // extension reload. During this short startup window, anything that
+    // appears is treated as existing history so an old assistant turn cannot
+    // be replayed as a command or generate a false ATTENTION event.
+    if (startupBaselineActive) {
+      for (const message of assistantMessages()) {
+        const historyKey = stableKey(message);
+        if (!historyKey) continue;
+        seen.add(historyKey);
+        attentionSeen.add(historyKey);
+      }
+
+      attentionCandidate = null;
+      commandCandidate = null;
+
+      if (Date.now() < startupBaselineUntil) {
+        setBadge("GPT↔PS SYNC", "idle");
+        return;
+      }
+
+      startupBaselineActive = false;
+      setBadge("GPT↔PS READY", "ok");
+    }
 
     const messages = assistantMessages();
     const last = messages[messages.length - 1];
