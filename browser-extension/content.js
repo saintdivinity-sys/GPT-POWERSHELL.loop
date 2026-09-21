@@ -79,18 +79,37 @@
     if (markerCandidates.length === 0) return null;
     const { marker, index: markerIndex } = markerCandidates[0];
 
-    // Only use actual code nodes. Bare <pre> may include ChatGPT's visual
-    // language header and was observed to execute the literal word "PowerShell".
-    const blocks = [...article.querySelectorAll("pre code")];
-    for (const block of blocks) {
-      const code = textOf(block);
+    // ChatGPT's code-block DOM has changed across UI versions. Prefer the
+    // actual <code> child when present, but also support a bare <pre> fallback.
+    // The fallback strips a visual language-label first line such as
+    // "PowerShell" so it can never become part of the executed command.
+    const candidates = [];
+    for (const pre of article.querySelectorAll("pre")) {
+      const codeNode = pre.querySelector("code");
+      let code = codeNode ? textOf(codeNode) : textOf(pre);
       if (!code) continue;
 
-      const trimmed = code.trim();
-      if (/^(powershell|pwsh|shell|bash|cmd|command prompt)$/i.test(trimmed)) continue;
+      let lines = code.replace(/\r\n/g, "\n").split("\n");
+      if (lines.length > 1 && /^(powershell|pwsh|shell|bash|cmd|command prompt)$/i.test(lines[0].trim())) {
+        lines = lines.slice(1);
+      }
+      code = lines.join("\n").trim();
+      if (code) candidates.push({ node: codeNode || pre, code });
+    }
 
-      const className = (block.className || "").toLowerCase();
-      const parentClass = (block.parentElement?.className || "").toLowerCase();
+    // Some ChatGPT variants expose code elements without the expected <pre>
+    // relationship. Add them as a secondary fallback without duplicating text.
+    for (const codeNode of article.querySelectorAll("code")) {
+      const code = textOf(codeNode).trim();
+      if (!code || candidates.some((entry) => entry.code === code)) continue;
+      candidates.push({ node: codeNode, code });
+    }
+
+    for (const { node, code } of candidates) {
+      if (/^(powershell|pwsh|shell|bash|cmd|command prompt|GPTPS_EXEC|GPTPS_HIGH)$/i.test(code)) continue;
+
+      const className = (node.className || "").toLowerCase();
+      const parentClass = (node.parentElement?.className || "").toLowerCase();
       const looksPowerShell =
         className.includes("powershell") ||
         className.includes("language-powershell") ||
@@ -99,13 +118,6 @@
         /\$[A-Za-z_][A-Za-z0-9_]*/.test(code);
 
       if (!looksPowerShell) continue;
-
-      // The assistant article already scopes us to one response. Matching the
-      // code block back into article.innerText with indexOf() is brittle
-      // because ChatGPT can normalize whitespace/text differently between the
-      // rendered code node and the article text. Once a strict GP marker is
-      // present in this same assistant turn, accept the first plausible
-      // PowerShell code block from that turn directly.
       return { command: code, marker };
     }
 
@@ -178,14 +190,19 @@
       // than immediately arming ATTENTION, otherwise AUTO SAFE can pause in
       // the small gap between marker text and finalized code-block DOM.
       const markerPending = full.includes("GPTPS_EXEC") || full.includes("GPTPS_HIGH");
-      const next = {
-        key,
-        text: full,
-        command: markerPending ? "__marker_render_pending__" : null,
-        marker: markerPending ? "__marker_render_pending__" : null
-      };
-      const requiredStableMs = markerPending ? MARKER_RENDER_GRACE_MS : ATTENTION_STABLE_MS;
-      const check = noteStableCandidate(attentionCandidate, next, requiredStableMs);
+
+      // Protocol invariant: once a strict GP marker is visible in this
+      // assistant turn, this turn is a command turn, never an ATTENTION turn.
+      // If its code block is still rendering (or temporarily unrecognized),
+      // keep rescanning instead of pausing AUTO SAFE.
+      if (markerPending) {
+        attentionCandidate = null;
+        setBadge("GPT↔PS WAIT CMD", "sending");
+        return;
+      }
+
+      const next = { key, text: full, command: null, marker: null };
+      const check = noteStableCandidate(attentionCandidate, next, ATTENTION_STABLE_MS);
       attentionCandidate = check.value;
 
       if (isGenerating() || !check.stable) return;
