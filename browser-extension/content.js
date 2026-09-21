@@ -2,6 +2,7 @@
   const seen = new Set();
   const attentionSeen = new Set();
   const ATTENTION_STABLE_MS = 4000;
+  const MARKER_RENDER_GRACE_MS = 15000;
   let busy = false;
   let scanTimer = null;
   let badge = null;
@@ -167,8 +168,19 @@
       commandCandidate = null;
       if (!full || attentionSeen.has(key) || seen.has(key)) return;
 
-      const next = { key, text: full, command: null };
-      const check = noteStableCandidate(attentionCandidate, next, ATTENTION_STABLE_MS);
+      // A protocol marker is rendered before ChatGPT's <pre><code> block can
+      // become queryable. Treat that as an in-progress command turn rather
+      // than immediately arming ATTENTION, otherwise AUTO SAFE can pause in
+      // the small gap between marker text and finalized code-block DOM.
+      const markerPending = full.includes("GPTPS_EXEC") || full.includes("GPTPS_HIGH");
+      const next = {
+        key,
+        text: full,
+        command: markerPending ? "__marker_render_pending__" : null,
+        marker: markerPending ? "__marker_render_pending__" : null
+      };
+      const requiredStableMs = markerPending ? MARKER_RENDER_GRACE_MS : ATTENTION_STABLE_MS;
+      const check = noteStableCandidate(attentionCandidate, next, requiredStableMs);
       attentionCandidate = check.value;
 
       if (isGenerating() || !check.stable) return;
