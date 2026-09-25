@@ -4,12 +4,16 @@
   const ATTENTION_STABLE_MS = 4000;
   const MARKER_RENDER_GRACE_MS = 15000;
   const STARTUP_BASELINE_MS = 6000;
+  const TAB_ENABLED_KEY = "gptps-tab-enabled-v1";
   const startupBaselineUntil = Date.now() + STARTUP_BASELINE_MS;
   let startupBaselineActive = true;
   let busy = false;
   let scanTimer = null;
   let badge = null;
+  let badgeText = null;
+  let tabToggle = null;
   let badgeVisible = true;
+  let tabEnabled = sessionStorage.getItem(TAB_ENABLED_KEY) !== "0";
   let attentionCandidate = null;
   let commandCandidate = null;
 
@@ -19,23 +23,88 @@
 
   function applyBadgeVisibility() {
     if (!badge) return;
-    badge.style.display = badgeVisible ? "block" : "none";
+    badge.style.display = badgeVisible ? "flex" : "none";
   }
 
   function setBadge(text, state = "idle") {
-    if (!badge) return;
-    badge.textContent = text;
+    if (!badge || !badgeText) return;
+    badgeText.textContent = text;
     const colors = {
       idle: ["rgba(12,18,22,.88)", "#bde5bd", "rgba(120,200,120,.55)"],
       sending: ["rgba(28,24,10,.92)", "#ffe69a", "rgba(230,190,80,.65)"],
       ok: ["rgba(10,28,18,.92)", "#bdf5cd", "rgba(100,220,140,.7)"],
       error: ["rgba(35,12,12,.94)", "#ffb7b7", "rgba(230,90,90,.75)"],
       result: ["rgba(12,22,34,.94)", "#b9d9ff", "rgba(100,160,230,.75)"],
-      attention: ["rgba(38,27,8,.95)", "#ffe5a3", "rgba(235,181,71,.82)"]
+      attention: ["rgba(38,27,8,.95)", "#ffe5a3", "rgba(235,181,71,.82)"],
+      off: ["rgba(18,18,18,.88)", "#b9b9b9", "rgba(150,150,150,.55)"]
     };
     const [background, color, borderColor] = colors[state] || colors.idle;
     Object.assign(badge.style, { background, color, borderColor });
     applyBadgeVisibility();
+  }
+
+  function baselineCurrentMessages() {
+    for (const message of assistantMessages()) {
+      const key = stableKey(message);
+      if (!key) continue;
+      seen.add(key);
+      attentionSeen.add(key);
+    }
+  }
+
+  function renderTabToggle() {
+    if (!tabToggle) return;
+    tabToggle.textContent = tabEnabled ? "OFF" : "ON";
+    tabToggle.title = tabEnabled
+      ? "Disable GPT-POWERSHELL.loop for this tab"
+      : "Enable GPT-POWERSHELL.loop for this tab";
+    tabToggle.setAttribute("aria-pressed", String(tabEnabled));
+  }
+
+  function wakeBridge() {
+    if (!tabEnabled) return;
+
+    chrome.runtime.sendMessage({ type: "GPTPS_TAB_HELLO" }, (response) => {
+      const runtimeError = chrome.runtime.lastError;
+      if (!tabEnabled) return;
+
+      if (runtimeError) {
+        console.warn("[GPTPS] extension background wake failed", runtimeError.message);
+        setBadge("GPT↔PS EXT ERR", "error");
+        return;
+      }
+
+      if (response?.connected) {
+        setBadge("GPT↔PS READY", "ok");
+      } else {
+        setBadge("GPT↔PS BRIDGE…", "sending");
+      }
+    });
+  }
+
+  function setTabEnabled(nextEnabled) {
+    const next = Boolean(nextEnabled);
+    if (tabEnabled === next) return;
+
+    tabEnabled = next;
+    sessionStorage.setItem(TAB_ENABLED_KEY, tabEnabled ? "1" : "0");
+    attentionCandidate = null;
+    commandCandidate = null;
+
+    renderTabToggle();
+
+    if (!tabEnabled) {
+      setBadge("GPT↔PS OFF", "off");
+      return;
+    }
+
+    // Enabling a tab must never replay an already-rendered assistant command.
+    baselineCurrentMessages();
+    startupBaselineActive = false;
+    setBadge("GPT↔PS READY", "ok");
+    wakeBridge();
+    clearTimeout(scanTimer);
+    scanTimer = setTimeout(scan, 250);
   }
 
   function assistantMessages() {
@@ -172,6 +241,13 @@
   }
 
   async function scan() {
+    if (!tabEnabled) {
+      attentionCandidate = null;
+      commandCandidate = null;
+      setBadge("GPT↔PS OFF", "off");
+      return;
+    }
+
     if (busy) return;
 
     // ChatGPT hydrates conversation history asynchronously after a page or
@@ -420,6 +496,7 @@
     }
 
     if (message?.type === "GPTPS_BRIDGE_STATUS") {
+      if (!tabEnabled) return;
       const payload = message.payload || {};
       const detail = payload.message || payload.reason || payload.type || "bridge error";
       console.warn("[GPTPS] bridge status:", detail);
@@ -443,7 +520,14 @@
 
   badge = document.createElement("div");
   badge.id = "gptps-status-badge";
-  badge.textContent = "GPT↔PS";
+
+  badgeText = document.createElement("span");
+  badgeText.textContent = "GPT↔PS";
+
+  tabToggle = document.createElement("button");
+  tabToggle.id = "gptps-tab-toggle";
+  tabToggle.type = "button";
+
   Object.assign(badge.style, {
     position: "fixed",
     right: "12px",
@@ -455,9 +539,41 @@
     background: "rgba(12,18,22,.88)",
     color: "#bde5bd",
     font: "11px/1.2 system-ui,sans-serif",
-    pointerEvents: "none"
+    pointerEvents: "auto",
+    alignItems: "center",
+    gap: "6px",
+    userSelect: "none"
   });
+
+  Object.assign(tabToggle.style, {
+    display: "none",
+    padding: "2px 5px",
+    border: "1px solid rgba(255,255,255,.2)",
+    borderRadius: "5px",
+    background: "rgba(255,255,255,.08)",
+    color: "inherit",
+    font: "10px/1.2 system-ui,sans-serif",
+    cursor: "pointer"
+  });
+
+  badge.addEventListener("mouseenter", () => {
+    if (tabToggle) tabToggle.style.display = "inline-block";
+  });
+
+  badge.addEventListener("mouseleave", () => {
+    if (tabToggle) tabToggle.style.display = "none";
+  });
+
+  tabToggle.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setTabEnabled(!tabEnabled);
+  });
+
+  badge.appendChild(badgeText);
+  badge.appendChild(tabToggle);
   document.documentElement.appendChild(badge);
+  renderTabToggle();
 
   chrome.storage.local.get({ badgeVisible: true }, (result) => {
     badgeVisible = result.badgeVisible !== false;
@@ -466,10 +582,11 @@
 
   // Everything already on the page when the extension starts is history.
   // Baseline it so extension reload/page refresh cannot replay an old command.
-  for (const message of assistantMessages()) {
-    const key = stableKey(message);
-    if (!key) continue;
-    seen.add(key);
-    attentionSeen.add(key);
+  baselineCurrentMessages();
+
+  if (tabEnabled) {
+    wakeBridge();
+  } else {
+    setBadge("GPT↔PS OFF", "off");
   }
 })();
