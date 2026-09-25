@@ -3,9 +3,10 @@
   const attentionSeen = new Set();
   const ATTENTION_STABLE_MS = 4000;
   const MARKER_RENDER_GRACE_MS = 15000;
-  const STARTUP_BASELINE_MS = 6000;
+  const STARTUP_BASELINE_STABLE_MS = 5000;
   const TAB_ENABLED_KEY = "gptps-tab-enabled-v1";
-  const startupBaselineUntil = Date.now() + STARTUP_BASELINE_MS;
+  let startupBaselineSignature = "";
+  let startupBaselineStableSince = 0;
   let startupBaselineActive = true;
   let busy = false;
   let scanTimer = null;
@@ -251,13 +252,20 @@
     if (busy) return;
 
     // ChatGPT hydrates conversation history asynchronously after a page or
-    // extension reload. During this short startup window, anything that
-    // appears is treated as existing history so an old assistant turn cannot
-    // be replayed as a command or generate a false ATTENTION event.
+    // extension reload. Do not use a fixed wall-clock window here: document_idle
+    // can run several seconds before React finishes restoring old turns.
+    //
+    // Instead, keep baselining every assistant turn that appears until the
+    // assistant-history key set has remained unchanged for a quiet period.
     if (startupBaselineActive) {
-      for (const message of assistantMessages()) {
+      const historyMessages = assistantMessages();
+      const historyKeys = [];
+
+      for (const message of historyMessages) {
         const historyKey = stableKey(message);
         if (!historyKey) continue;
+
+        historyKeys.push(historyKey);
         seen.add(historyKey);
         attentionSeen.add(historyKey);
       }
@@ -265,7 +273,19 @@
       attentionCandidate = null;
       commandCandidate = null;
 
-      if (Date.now() < startupBaselineUntil) {
+      const historySignature = historyKeys.join("|");
+
+      if (historySignature !== startupBaselineSignature) {
+        startupBaselineSignature = historySignature;
+        startupBaselineStableSince = Date.now();
+      }
+
+      const historyStable =
+        historyKeys.length > 0 &&
+        startupBaselineStableSince > 0 &&
+        (Date.now() - startupBaselineStableSince) >= STARTUP_BASELINE_STABLE_MS;
+
+      if (!historyStable || isGenerating()) {
         setBadge("GPT↔PS SYNC", "idle");
         return;
       }
