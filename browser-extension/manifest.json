@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GPT-POWERSHELL.loop Bridge",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Local bridge between explicit ChatGPT PowerShell blocks and GPT-POWERSHELL.loop.",
   "permissions": ["storage"],
   "host_permissions": [
