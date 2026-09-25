@@ -87,9 +87,27 @@ chrome.runtime.onStartup.addListener(connect);
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const isCommand = message?.type === "GPTPS_ASSISTANT_COMMAND";
   const isAttention = message?.type === "GPTPS_ATTENTION_REQUIRED";
-  if (!isCommand && !isAttention) return;
+  const isTabHello = message?.type === "GPTPS_TAB_HELLO";
+  if (!isCommand && !isAttention && !isTabHello) return;
 
   connect();
+
+  if (isTabHello) {
+    const reply = () => {
+      sendResponse({
+        ok: true,
+        connected: socket?.readyState === WebSocket.OPEN
+      });
+    };
+
+    if (socket?.readyState === WebSocket.CONNECTING) {
+      setTimeout(reply, 500);
+      return true;
+    }
+
+    reply();
+    return true;
+  }
 
   const send = () => {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
