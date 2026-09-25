@@ -109,18 +109,39 @@
   }
 
   function assistantMessages() {
+    // Legacy ChatGPT DOM exposed explicit assistant-role nodes inside
+    // conversation-turn <article> elements.
     const roleNodes = [...document.querySelectorAll('[data-message-author-role="assistant"]')];
-    const messages = [];
-    const unique = new Set();
+    const legacyMessages = [];
+    const legacyUnique = new Set();
 
     for (const node of roleNodes) {
       const container = node.closest('article[data-testid^="conversation-turn-"]') || node;
-      if (unique.has(container)) continue;
-      unique.add(container);
-      messages.push(container);
+      if (legacyUnique.has(container)) continue;
+      legacyUnique.add(container);
+      legacyMessages.push(container);
     }
 
-    return messages;
+    if (legacyMessages.length > 0) {
+      return legacyMessages;
+    }
+
+    // Current ChatGPT DOM (Sep 2026) no longer exposes either
+    // data-message-author-role="assistant" or conversation-turn <article>
+    // wrappers. Assistant answers are rendered through a MarkdownRoot-* node.
+    // Use the markdown root itself as the message container; it preserves DOM
+    // order and contains the rendered code blocks needed by GPTPS extraction.
+    const markdownRoots = [...document.querySelectorAll('div[class*="MarkdownRoot-"]')];
+    const fallbackMessages = [];
+    const fallbackUnique = new Set();
+
+    for (const root of markdownRoots) {
+      if (fallbackUnique.has(root)) continue;
+      fallbackUnique.add(root);
+      fallbackMessages.push(root);
+    }
+
+    return fallbackMessages;
   }
 
   function stableKey(article) {
