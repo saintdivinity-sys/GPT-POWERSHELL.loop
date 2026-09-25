@@ -92,6 +92,8 @@ The safety layer blocks high-risk patterns including destructive disk, boot, reg
 - command timeout
 - JSONL session logs
 - Chromium Manifest V3 extension
+- per-tab GPT↔PS ON/OFF control in the floating badge
+- enabled ChatGPT tabs proactively wake/check the local bridge
 - best-effort ChatGPT DOM observer
 - best-effort result insertion into the composer
 - no global mouse/keyboard automation
