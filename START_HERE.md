@@ -1,4 +1,3 @@
-
 # GPT-POWERSHELL.loop — Установка из исходников / Install from source
 
 **Windows 10/11 · Chromium (Opera GX, Chrome или Edge) · два пути: Codex или ChatGPT.**
@@ -100,7 +99,7 @@ With the user, choose a safe, user-writable **non-existing** project checkout pa
 2. Within that checkout run `npm ci` (`package-lock.json` is included).
 3. Verify frontend compilation with `npm run build`.
 4. Create a Windows desktop executable with `npm run desktop:build -- --no-bundle`. This invokes the Rust/Tauri build; it may take substantial time and disk space. **The frontend command alone does not make an EXE.**
-5. If using default Rust target settings, check the actual file at `src-tauri\\target\\release\\gpt-powershell-loop.exe`. If `CARGO_TARGET_DIR` is set, follow that directory instead. Confirm build exit code 0, file existence and exact path before launching.
+5. If using default Rust target settings, check the actual file at `src-tauri\target\release\gpt-powershell-loop.exe`. If `CARGO_TARGET_DIR` is set, follow that directory instead. Confirm build exit code 0, file existence and exact path before launching.
 6. Start the desktop EXE as the normal Windows user. Select the desired channel/port before starting its Bridge (CH1: 47177, CH2: 47178, CH3: 47179), click Start Bridge, and verify the actual listener. If a port is already occupied, investigate; do not kill another GP process without permission.
 
 **What was installed?** `--no-bundle` builds a runnable EXE, **not an MSI/NSIS setup installer**. A real downloadable installer requires a separate build/publish process, verification and a public GitHub Release asset. Do not claim a release is available simply because the source builds locally.
