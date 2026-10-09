@@ -1,5 +1,7 @@
 # GPT-POWERSHELL.loop
 
+> **New here?** [START HERE — Install GPT-POWERSHELL.loop with ChatGPT](START_HERE.md). This public guide covers Windows prerequisites, desktop build/release checks, browser extension setup, global ChatGPT Custom Instructions, safety, first test, and version-specific single/multichannel compatibility.
+
 A Windows-first local bridge that can take an **explicit PowerShell command from a ChatGPT reply**, execute it locally, capture `stdout` + `stderr`, and send the result back into the ChatGPT tab — repeatedly until paused or stopped.
 
 > **Status:** public early MVP / v0.1 scaffold  
