@@ -1,32 +1,54 @@
-# GPT-POWERSHELL.loop — START HERE / ChatGPT Installation Guide
 
-**Public, shareable onboarding guide.** Windows 10/11 + ChatGPT in a Chromium-based browser (Opera GX, Chrome, or Edge). This document is written both for human readers and for an AI assistant helping its user.
+# GPT-POWERSHELL.loop — Установка из исходников / Install from source
 
-**Repository:** https://github.com/saintdivinity-sys/GPT-POWERSHELL.loop  
-**README / source:** https://github.com/saintdivinity-sys/GPT-POWERSHELL.loop/blob/main/README.md  
-**Releases (check actual assets before claiming a download):** https://github.com/saintdivinity-sys/GPT-POWERSHELL.loop/releases  
-**License:** MIT.
+**Windows 10/11 · Chromium (Opera GX, Chrome или Edge) · два пути: Codex или ChatGPT.**
 
-> **Give this exact link to ChatGPT:**  
-> https://github.com/saintdivinity-sys/GPT-POWERSHELL.loop/blob/main/START_HERE.md
->
-> **Скопируй ссылку в свой ChatGPT и напиши:**  
-> «Прочитай START_HERE.md по этой ссылке и помоги установить GPT-POWERSHELL.loop на мой Windows-компьютер. Проверь опубликованную версию и доступность установщика. Действуй по одному шагу за раз, жди мой результат. После установки помоги настроить расширение и глобальные пользовательские инструкции ChatGPT».
+**Официальный репозиторий:** https://github.com/saintdivinity-sys/GPT-POWERSHELL.loop  
+**Эта инструкция:** https://github.com/saintdivinity-sys/GPT-POWERSHELL.loop/blob/main/START_HERE.md  
+**Исходники / README:** https://github.com/saintdivinity-sys/GPT-POWERSHELL.loop/blob/main/README.md  
+**Releases:** https://github.com/saintdivinity-sys/GPT-POWERSHELL.loop/releases (скачивание готовой программы возможно только при наличии реально опубликованного файла).  
+**Лицензия:** MIT.
+
+## Выберите способ установки / Choose your assistant
+
+Оба способа **собирают GP из исходного кода GitHub на Windows**, затем устанавливают расширение браузера и проверяют соединение. Это не два разных дистрибутива. **До установки GP ChatGPT сам по себе не может выполнять PowerShell на вашем ПК.**
+
+### Вариант 1 — Через Codex / Install with Codex
+
+Для человека, у которого **Codex уже настроен для работы с локальными файлами и терминалом Windows**. Если Codex запущен в облаке или не имеет доступа к этому ПК, он не сможет установить программу на Windows автоматически: попросите его объяснить, как подключить локальное рабочее окружение, или выберите вариант 2.
+
+1. Откройте Codex и выберите доступную ему локальную рабочую папку на Windows (не существующую папку GP).
+2. Скопируйте текст ниже в Codex. Codex должен **сначала прочитать этот документ и актуальные файлы репозитория**, затем вести установку пошагово с проверкой результатов и запросом разрешений.
+
+> Прочитай https://github.com/saintdivinity-sys/GPT-POWERSHELL.loop/blob/main/START_HERE.md и актуальный репозиторий. Я выбираю **установку через Codex из исходников** на Windows. Сначала проверь, есть ли у тебя реальный доступ к моему локальному Windows-терминалу и рабочей папке. Не утверждай, что установка выполнена, пока не проверены файлы и результаты команд. Проверь официальные требования (Git, Node.js/npm, Rust, MSVC Build Tools, WebView2), запроси разрешение на необходимые установки, предложи безопасную папку клонирования, затем по одному проверяемому действию выполни clone, npm ci, frontend build, Tauri desktop build, подключение расширения браузера и первый read-only тест GP. Не перезаписывай существующие данные, не используй force push, не отключай защиту Windows и не запускай ничего с правами администратора без моего явного согласия. Настройка расширения и ChatGPT Custom Instructions — с моим участием.
+
+### Вариант 2 — Через ChatGPT / Install guided by ChatGPT
+
+Для человека, который пользуется обычным ChatGPT в браузере. ChatGPT объясняет **одно действие за раз**. Человек выполняет команды в PowerShell и вставляет полученный вывод. После установки GP становится возможен автоматизированный обмен через Bridge.
+
+1. Откройте новый чат ChatGPT: https://chatgpt.com/
+2. Отправьте ссылку на эту инструкцию и скопируйте следующий текст:
+
+> Прочитай https://github.com/saintdivinity-sys/GPT-POWERSHELL.loop/blob/main/START_HERE.md и актуальный GitHub-репозиторий. Я выбираю **установку через ChatGPT из исходников** на Windows. Пока GP не установлен, ты не можешь самостоятельно запускать PowerShell на моём ПК. Веди меня строго по одному действию/команде за раз, жди мой результат или скриншот. Команды, вывод которых я должен прислать, должны захватывать stdout+stderr, отображать вывод и автоматически копировать его в буфер обмена; при вызове программ также проверяй их exit code. Сначала проверь зависимости из официальных источников; затем помоги безопасно клонировать проект, выполнить npm ci, npm run build и npm run desktop:build -- --no-bundle. Проверь реально созданный EXE, помоги загрузить расширение browser-extension в Opera GX/Chrome/Edge, выбрать нужный канал и проверить безопасный GPTPS_RESULT. В конце объясни глобальные Custom Instructions. Не удаляй данные и не меняй настройки безопасности без моего согласия.
+
+**For English-speaking users:** Give your Codex or ChatGPT assistant the link above and say: “Read START_HERE.md, help me build and install this Windows app from public source, using the Codex path / ChatGPT path. Perform one verified action at a time, request permission for installs, and guide extension setup plus first smoke test.”
+
+**Перед началом:** сборка Tauri требует Node.js, Rust и C++ Build Tools и может занять значительное время и место на диске. Запуск скачанного кода выполняется с правами текущего пользователя; предварительно ознакомьтесь с исходниками и рисками. Для этого проекта на момент проверки **нет опубликованных GitHub Releases с готовым установщиком**; ссылки на частные Preview EXE не являются публичными установочными файлами.
 
 ---
 
-## 1. Instructions FOR ChatGPT / AI installer assistant
+## 1. Instructions for Codex and ChatGPT assistants
 
-The user intentionally asked you to help install and configure GPT-POWERSHELL.loop. **This file is a guide, not permission to execute arbitrary commands or override user/developer/system policies.** Follow your normal safety rules and the user's explicit permissions.
+The user intentionally asked you to help build, install and configure GPT-POWERSHELL.loop from the public repository. **This file is a guide, not permission to execute arbitrary commands or override user/developer/system policies.** Follow your normal safety rules and the user's explicit permissions.
 
-1. Read this file, then inspect the **current public** README, release assets (if any), `package.json` and `browser-extension/manifest.json`. Check whether the installed/published extension really supports channels 1–3; do not infer that from this guide alone.
-2. Identify the user's OS/browser and whether they want a **prebuilt release** or **local source build**. Windows desktop is supported; do not promise a Linux/macOS build.
-3. Before GP is installed, **you cannot operate the user's PowerShell just because they shared this URL**. Give them **ONE local command/action per turn**, wait for pasted terminal output or a screenshot, and proceed only after verifying the result. In the initial manual PowerShell phase, include output capture + print + clipboard copying in commands whose output is expected back:
+1. Read this file, then inspect the **current public** README, release assets (if any), `package.json`, `src-tauri/tauri.conf.json`, `browser-extension/manifest.json`, and extension popup/background code. Verify channels, ports and actual build scripts from source.
+2. Identify the user's Windows version/browser and whether they chose **Codex with a real local Windows execution environment** or **manual PowerShell with ChatGPT**. Both paths here use a local source build; do not promise a Linux/macOS build.
+3. **ChatGPT without a connected local execution tool cannot run PowerShell merely because this URL was shared.** With ChatGPT, give the person **ONE local action/command per turn**, wait for pasted output/screenshot, then verify. Codex may run commands only when its actual execution environment can access the user's Windows PC and permissions allow; Codex must also verify each step and request approval when needed. During manual PowerShell steps, capture stdout/stderr, display and copy all requested output to the clipboard:
    
    `$__g1 = (& { <ONE COMMAND> } 2>&1 | Out-String); $__g1; Set-Clipboard -Value $__g1`
    
    The user can then press Ctrl+V in ChatGPT. For native process exit status, also record `$LASTEXITCODE` before copying.
-4. Prefer official public release packages **only if a concrete published asset exists and its source is verified**. Do NOT invent release filenames, asset URLs, SHA-256 hashes or installation success. If there is no usable release, offer the source-build path below and explain prerequisites/compilation time. Do not download binaries from a third-party site.
+4. This document is the **source-build** guide. Do NOT invent prebuilt releases, asset URLs, SHA-256 hashes or successful installs; explain prerequisites and build time. If someone explicitly asks for a binary, only use a real verified GitHub release. Do not download binaries from third-party sites.
 5. Verify the repository and target directories before clone/install. Avoid overwriting an existing checkout, running process, unrelated files or existing GP installation. Verify commands/build exit codes before claiming success.
 6. Installing Git, Node.js, Rust, Microsoft C++ Build Tools or WebView2 may require explicit user interaction and possibly privilege elevation; do not silently change Windows settings, bypass browser warnings, disable Defender, or install unrequested tools.
 7. Never execute destructive maintenance commands on a new user's PC during onboarding. Start with `STEP` mode, not unattended `AUTO SAFE`. Do not request passwords, access tokens, private keys or admin elevation unless absolutely necessary and clearly explained.
@@ -36,73 +58,71 @@ The user intentionally asked you to help install and configure GPT-POWERSHELL.lo
 
 **User-facing final outcome checklist:** actual installed version; actual extension version; install directory; confirmed listener port; selected browser-tab channel; first successful read-only GP round-trip; Custom Instructions saved by the user or explicitly pending; remaining limitations.
 
-## 2. Current public version versus in-development Preview — IMPORTANT
 
-As inspected on **2026-10-08**, public GitHub `main` has **desktop version 0.1.2** and browser extension manifest **0.1.4**. The **published public source extension is single-channel**, with its background worker bound to `127.0.0.1:47177` and a popup for floating-badge visibility. This is the **actual public baseline**, not the author's newer local development Preview.
+## 2. Public source status and channels — verified after commit 37de51f
 
-A newer **local, not-yet-public Preview** has been tested with a 3-channel popup, channel routing and `GPTPS_EXEC:2`. Do **not** describe the public repository as already containing that feature unless you have first verified the public code/release was updated. The author's private/local Windows paths, preview EXEs and unpublished modifications are **not** public installer artifacts.
+The public GitHub `main` branch was updated on **2026-10-08** to commit `37de51fb2339ebfda96da27fde0d455d6d8862a5`. Source `package.json` and Tauri config still report desktop version `0.1.2`; `browser-extension/manifest.json` reports `0.1.4`. **These version strings alone do not prove which features are present** — inspect the actual source.
 
-| Capability | Public `main` baseline verified 2026-10-08 | When newer multichannel extension is actually published |
-| --- | --- | --- |
-| Default bridge | Channel 1 / port `47177` | Per-tab Channel 1/2/3 |
-| Normal live marker | `GPTPS_EXEC` | `GPTPS_EXEC:1`, `GPTPS_EXEC:2`, `GPTPS_EXEC:3` |
-| Heavy live marker | `GPTPS_HIGH` | `GPTPS_HIGH:1`, `GPTPS_HIGH:2`, `GPTPS_HIGH:3` |
-| Popup | Floating-badge visibility | Channel buttons 01/02/03/OFF |
-| OFF | Floating badge has ON/OFF control | Per-tab automation OFF, not desktop shutdown |
-| Multi-instance routing | Not established by the public extension | One active listener port per desktop instance |
+At that commit, the **public source extension supports per-tab channel selection 01 / 02 / 03 / OFF**. Its background script and Rust Bridge use:
 
-**Compatibility:** in the newer extension, unsuffixed `GPTPS_EXEC` / `GPTPS_HIGH` explicitly address **Channel 1**; they do not follow the tab's selected channel. Channel mismatch must fail closed (`WRONG CH: expected 2, got 1`). Do not disable that protection. A UI reading `GPT↔PS READY` is not itself proof that the desktop socket is connected; confirm the listener/connection.
+| Channel | Local WebSocket | Normal marker | Long-running marker |
+| --- | --- | --- | --- |
+| 1 | `127.0.0.1:47177` | `GPTPS_EXEC:1` or legacy `GPTPS_EXEC` | `GPTPS_HIGH:1` or legacy `GPTPS_HIGH` |
+| 2 | `127.0.0.1:47178` | `GPTPS_EXEC:2` | `GPTPS_HIGH:2` |
+| 3 | `127.0.0.1:47179` | `GPTPS_EXEC:3` | `GPTPS_HIGH:3` |
 
-**Future-proof instruction:** The AI installer must compare this dated description to the **actual public current files and releases**. Later code wins. If the project publishes a full multichannel release, use its documented version and verify each selected channel with a smoke test.
+**Important:** unsuffixed markers always mean Channel 1, not whichever tab is selected. Mismatched channel commands must be rejected. For each active channel, start a matching desktop Bridge listener. The Control Center can visually show three channel cards, but a single desktop process listens on the selected port, **not all three simultaneously**. Confirm the listener; a UI showing READY is not enough.
 
-## 3. Install desktop application on Windows
+The public source now includes the multichannel interface, updated extension, Storage Cleaner and neon UI. **No public GitHub Release asset was present when this guide was updated.** The original author's locally built Preview EXEs are not downloadable from this repository.
 
-### Option A — a published, verified release asset (when available)
+**Future installers:** compare this dated snapshot with the current actual repository files, published releases and locally built version before giving channel commands; later verified code takes precedence.
 
-1. Open the official [Releases page](https://github.com/saintdivinity-sys/GPT-POWERSHELL.loop/releases).
-2. If a Windows release installer/portable artifact is **actually present**, check its publisher/source, release notes, filename, requirements and hashes when provided. Download only the artifact for your Windows architecture.
-3. Extract or install in a normal user-writable directory, launch `GPT-POWERSHELL.loop` and confirm the app opens.
-4. The user must still install the matching browser extension from a public matching release/source and enable it in the browser.
-5. If release packages or matching extension files are unavailable, **do not pretend Option A succeeded**; use Option B below.
 
-### Option B — build the current public source
+## 3. Build and launch the Windows desktop application from source
 
-Official requirements:
+**Both Codex and ChatGPT paths follow the same verified installation stages.** Codex can perform a stage only if it truly has authorized local Windows terminal access; otherwise the user performs it manually.
 
-- Windows 10/11, WebView2 runtime.
+Official prerequisites:
+
+- Windows 10/11 and Microsoft WebView2 runtime.
 - Git: https://git-scm.com/downloads/win
 - Node.js 20+ and npm: https://nodejs.org/
 - Rust stable (rustup): https://rustup.rs/
-- Microsoft C++ Build Tools with **Desktop development with C++** workload.
-- PowerShell 7 is recommended; Windows PowerShell can be used by the current backend where supported.
-- Tauri's authoritative Windows prerequisite list: https://v2.tauri.app/start/prerequisites/
+- Microsoft C++ Build Tools, **Desktop development with C++** workload.
+- PowerShell 7 recommended (Windows PowerShell may work where supported).
+- Tauri Windows prerequisites: https://v2.tauri.app/start/prerequisites/
 
-**AI assistant: install/check dependencies in sequence, ONE action at a time, using official sources. Ask the user before any installer/elevation.**
+**Install/check prerequisites one at a time.** Follow official installers, explain privilege prompts, and ask before installing software. Never guess that a dependency is present.
 
-Once prerequisites are confirmed, choose a safe non-existing checkout path together with the user and perform these stages **individually**, verifying output before the next:
+With the user, choose a safe, user-writable **non-existing** project checkout path. Do not replace any existing directory or GP installation. Perform each stage individually and verify the exit code/output before proceeding:
 
-1. Clone official public repository, e.g. `git clone https://github.com/saintdivinity-sys/GPT-POWERSHELL.loop.git` (run in a user-approved parent directory). If it already exists, inspect instead of clobbering.
-2. In the cloned repository run `npm ci` (the public repo contains `package-lock.json`).
-3. Run frontend verification `npm run build`.
-4. Build the desktop application with `npm run desktop:build -- --no-bundle`. This compiles the Rust/Tauri EXE without requiring an installer bundle. It may take time and use substantial disk space.
-5. On a normal default build the EXE is at `src-tauri\target\release\gpt-powershell-loop.exe` within the clone. If `CARGO_TARGET_DIR` was set, adjust this path accordingly. Verify the actual file exists and build exit code is 0 before running.
-6. Start the desktop app as a **regular user**, not administrator. Select the correct bridge port (public baseline: `47177`), then click `Start Bridge`. Verify it really reports the local listener or connected state.
+1. Clone the official source repository using `git clone https://github.com/saintdivinity-sys/GPT-POWERSHELL.loop.git` from an approved parent directory. Record its actual checkout location and commit.
+2. Within that checkout run `npm ci` (`package-lock.json` is included).
+3. Verify frontend compilation with `npm run build`.
+4. Create a Windows desktop executable with `npm run desktop:build -- --no-bundle`. This invokes the Rust/Tauri build; it may take substantial time and disk space. **The frontend command alone does not make an EXE.**
+5. If using default Rust target settings, check the actual file at `src-tauri\\target\\release\\gpt-powershell-loop.exe`. If `CARGO_TARGET_DIR` is set, follow that directory instead. Confirm build exit code 0, file existence and exact path before launching.
+6. Start the desktop EXE as the normal Windows user. Select the desired channel/port before starting its Bridge (CH1: 47177, CH2: 47178, CH3: 47179), click Start Bridge, and verify the actual listener. If a port is already occupied, investigate; do not kill another GP process without permission.
 
-**Warning:** `npm run build` alone only builds the frontend; it does NOT create the Windows executable. `cargo`/Tauri prerequisites must be correctly installed before the desktop build.
+**What was installed?** `--no-bundle` builds a runnable EXE, **not an MSI/NSIS setup installer**. A real downloadable installer requires a separate build/publish process, verification and a public GitHub Release asset. Do not claim a release is available simply because the source builds locally.
+
+**ChatGPT path only:** for a manual PowerShell command whose output must be pasted, capture stdout+stderr, print it and copy it to the clipboard, e.g. `$__g1 = (& { <ONE COMMAND> } 2>&1 | Out-String); $__g1; Set-Clipboard -Value $__g1`. Record native process exit status explicitly when important. Wait for the pasted output before continuing.
+
 
 ## 4. Install the ChatGPT browser extension
 
-The public repository contains the unpacked **Chromium Manifest V3** extension in `browser-extension/`. Keep the cloned folder in a stable location; do not delete it after loading the extension.
+The official repository includes an unpacked **Chromium Manifest V3** extension at `browser-extension/`. Keep the clone in a stable location: moving or deleting the directory can break the loaded extension.
 
-1. Open the browser's extensions management page: **Opera GX:** `opera://extensions`; **Chrome:** `chrome://extensions`; **Edge:** `edge://extensions`.
-2. Enable **Developer mode** in the extensions page.
-3. Click **Load unpacked / Загрузить распакованное** and choose the exact `browser-extension` directory inside the cloned project (the folder containing `manifest.json`).
-4. Confirm that **GPT-POWERSHELL.loop Bridge** is listed and enabled. Review the requested permissions.
-5. Open https://chatgpt.com/ in a **new tab**, or refresh an existing ChatGPT tab after installation/reload.
-6. For the **public baseline**, use the floating badge's ON/OFF and desktop's default Channel 1, port `47177`. The public baseline popup is not the three-channel selector.
-7. **Only when a newer extension actually includes a channel popup**, click the extension's toolbar/puzzle icon (NOT the floating badge inside the ChatGPT page) to select `01` / `02` / `03` / `OFF`. Match the selected tab channel to the desktop listening port before issuing a command.
+1. Open your browser's extensions page: **Opera GX:** `opera://extensions`; **Chrome:** `chrome://extensions`; **Edge:** `edge://extensions`.
+2. Enable **Developer mode**.
+3. Click **Load unpacked / Загрузить распакованное** and select the `browser-extension` folder inside the actual cloned repository (it must contain `manifest.json`).
+4. Confirm **GPT-POWERSHELL.loop Bridge** is enabled; review the extension's requested permissions.
+5. Open or refresh https://chatgpt.com/ after loading the extension.
+6. Open the extension **toolbar popup** (puzzle/extension icon), not just the on-page floating badge. Choose `01`, `02`, `03`, or `OFF` for this ChatGPT tab. Set the desktop Bridge port to match the channel selected in the tab.
+7. Confirm the desktop app is genuinely listening on the chosen port before testing commands. `OFF` disables automation for the tab; it does **not** shut down the desktop application.
 
-**Multi-instance caution:** Do not start a second instance on an already occupied port or kill an existing bridge without explicit user agreement. In current design, one desktop process binds one port, even when the interface draws three channel cards.
+If your installed extension has no three-channel popup, inspect the actual files and reload the extension. An old unpacked extension or a mismatched install may be active. Do not assume the UI alone proves a Bridge connection.
+
+**Multi-instance caution:** A port can be owned by only one listener at a time. Do not start a competing listener or terminate an existing GP instance without permission.
 
 ## 5. Configure global ChatGPT Custom Instructions
 
@@ -128,8 +148,8 @@ The public repository contains the unpacked **Chromium Manifest V3** extension i
 
 First verify that the desktop app says the bridge is listening on the expected port and that the extension is active for that ChatGPT tab.
 
-- **Legacy public Channel 1:** tell ChatGPT: `Используем протокол GP. У меня установлена публичная одноканальная версия, порт 47177. Дай одну безопасную команду для проверки.`
-- **Verified newer Channel 2:** select CH2 in the extension, start the CH2 desktop listener on `47178`, then tell ChatGPT: `Используем протокол GP, канал 2. Проведи безопасный тест через GPTPS_EXEC:2.`
+- **Channel 1 (current source, legacy markers also supported):** tell ChatGPT: `Используем протокол GP. У меня установлена публичная одноканальная версия, порт 47177. Дай одну безопасную команду для проверки.`
+- **Channel 2 (current multichannel source):** select CH2 in the extension, start the CH2 desktop listener on `47178`, then tell ChatGPT: `Используем протокол GP, канал 2. Проведи безопасный тест через GPTPS_EXEC:2.`
 - To stop using GP in that chat: `Не используем протокол GP.` For tab automation also choose OFF in the extension (when available), or use the baseline ON/OFF control.
 
 Safe first test command *body* (the assistant must supply the correct live marker separately):
@@ -148,7 +168,7 @@ Expect a returned `GPTPS_RESULT` with `exit_code=0` and `GP_SMOKE_TEST_OK` in ST
 | No local connection | Start the desktop bridge; confirm `127.0.0.1` port and that no other instance owns it |
 | `WRONG CH: expected 2, got 1` | ChatGPT used the legacy/bare Channel 1 marker while the tab expects CH2; resend with the correct explicit channel marker (new extension only) |
 | `READY` but no execution | READY can represent extension state rather than confirmed socket connection; check desktop listener and tab state |
-| No 01/02/03 buttons in popup | You likely installed the older public extension; read the actual public popup source/release before expecting multi-channel |
+| No 01/02/03 buttons in popup | Current public source includes a channel popup; check whether an older extension was loaded, reload the unpacked extension and refresh ChatGPT |
 | Build fails | Record the actual command, exit code, last lines of saved log, Node/Rust/MSVC versions; do not repeat expensive builds blindly |
 | Huge command output freezes a tab | Save verbose detail into a local file and return a concise summary only |
 | GPT does not know GP in a new chat | Check Custom Instructions were saved, then explicitly activate GP in that chat |
@@ -161,7 +181,7 @@ The GP bridge is **not a VM or sandbox**. It executes PowerShell with the privil
 - This public onboarding file is intentionally **independent of private Mind Palace / Game1 project documentation**.
 - Do not copy private project paths, local executable previews, credentials, tokens or internal repository details into public instructions.
 - Before calling a feature "released", verify public GitHub source **and** distributable assets.
-- After publishing a verified multichannel release, update this file and the public README; document the matching extension version, downloadable assets and checksums when available.
+- Keep this document and public README aligned with the published multichannel source. Do not claim packaged release availability until actual assets exist; document checksums when supplied.
 - Project design discussions and live installation are different: reading this document is not itself user consent to execute commands.
 
-**Version of this guide:** 2026-10-08. The live public repository and actual tested installed artifacts take precedence over any dated compatibility note here.
+**Version of this guide:** 2026-10-08. The live public repository and actual tested installed artifacts take precedence over any dated compatibility note here. Latest guide revision documents public main at 37de51f and the Codex/ChatGPT source-build choice.
