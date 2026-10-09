@@ -1,4 +1,5 @@
 use crate::safety;
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use chrono::Utc;
 use futures_util::{stream::SplitSink, SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
@@ -9,7 +10,8 @@ use tokio::{
     io::AsyncWriteExt,
     net::{TcpListener, TcpStream},
     process::Command,
-    sync::Mutex,
+    sync::{watch, Mutex},
+    task::JoinSet,
     time::timeout,
 };
 use tokio_tungstenite::{
@@ -36,6 +38,13 @@ pub struct BridgeState {
     pub server_started: bool,
     pub timeout_seconds: u64,
     pub high_active: bool,
+    pub execution_active: bool,
+    pub execution_started_at_ms: Option<i64>,
+    pub last_accepted_command: Option<String>,
+    pub last_accepted_marker: Option<String>,
+    pub server_stopping: bool,
+    pub shutdown_sender: Option<watch::Sender<bool>>,
+    pub shutdown_done: Option<watch::Receiver<bool>>,
     pub attention_armed_at_ms: Option<i64>,
     console_log: VecDeque<ConsoleEntry>,
     next_console_id: u64,
@@ -49,6 +58,13 @@ impl Default for BridgeState {
             server_started: false,
             timeout_seconds: 300,
             high_active: false,
+            execution_active: false,
+            execution_started_at_ms: None,
+            last_accepted_command: None,
+            last_accepted_marker: None,
+            server_stopping: false,
+            shutdown_sender: None,
+            shutdown_done: None,
             attention_armed_at_ms: None,
             console_log: VecDeque::new(),
             next_console_id: 1,
@@ -100,6 +116,174 @@ impl BridgeState {
     }
 }
 
+/// Explicit user-initiated replay of the last accepted command.
+/// The UI must request a fresh confirmation for each replay.
+pub async fn replay_accepted_command(
+    state: SharedState,
+    as_high: bool,
+    expected_command: String,
+    confirmed: bool,
+) -> Result<String, String> {
+    if !confirmed {
+        return Err("Replay requires explicit user confirmation".into());
+    }
+
+    // Atomically validate and reserve the single execution slot.
+    let (command, timeout_seconds) = {
+        let mut guard = state.lock().await;
+
+        if !guard.server_started {
+            return Err("Cannot replay: bridge is offline".into());
+        }
+
+        if guard.execution_active {
+            return Err("Cannot replay: PowerShell is already executing".into());
+        }
+
+        if guard.mode == "stopped" {
+            return Err("Cannot replay while STOP LOOP is active".into());
+        }
+
+        let command = guard
+            .last_accepted_command
+            .clone()
+            .ok_or_else(|| "No accepted command available for replay".to_string())?;
+
+        // Reject stale UI requests, even if a newer command arrived
+        // between opening the confirmation and clicking Yes.
+        if command != expected_command {
+            return Err(
+                "Last accepted command changed; review it before replaying".into()
+            );
+        }
+
+        let marker = guard
+            .last_accepted_marker
+            .as_deref()
+            .ok_or_else(|| "Original GP channel marker is missing".to_string())?;
+
+        let suffix = marker
+            .strip_prefix("GPTPS_EXEC")
+            .or_else(|| marker.strip_prefix("GPTPS_HIGH"))
+            .ok_or_else(|| "Original GP marker is invalid".to_string())?;
+
+        let original_channel: u16 = match suffix {
+            "" | ":1" => 1,
+            ":2" => 2,
+            ":3" => 3,
+            _ => return Err("Original GP channel is invalid".into()),
+        };
+
+        if guard.port != 47176 + original_channel {
+            return Err("Original command belongs to a different channel".into());
+        }
+
+        let decision = safety::classify(&command);
+
+        if !decision.allowed {
+            guard.push_console(
+                "critical",
+                format!("Manual replay blocked: {}", decision.reason),
+            );
+            return Err(format!("Safety check rejected replay: {}", decision.reason));
+        }
+
+        guard.execution_active = true;
+        guard.execution_started_at_ms = Some(Utc::now().timestamp_millis());
+        guard.high_active = as_high;
+
+        let replay_mode = if as_high { "HIGH" } else { "EXEC" };
+
+        guard.push_console(
+            "status",
+            format!("Manual {replay_mode} replay started"),
+        );
+        guard.push_console("command", command.clone());
+
+        (command, guard.timeout_seconds)
+    };
+
+    let result = if as_high {
+        run_powershell_high(&command).await
+    } else {
+        run_powershell(&command, timeout_seconds).await
+    };
+
+    match result {
+        Ok(result) => {
+            let summary = match &result {
+                ServerMessage::CommandResult {
+                    cycle_id,
+                    exit_code,
+                    stdout,
+                    stderr,
+                    ..
+                } => {
+                    let mut guard = state.lock().await;
+
+                    guard.execution_active = false;
+                    guard.execution_started_at_ms = None;
+                    guard.high_active = false;
+
+                    let label = if as_high { "HIGH" } else { "EXEC" };
+
+                    guard.push_console(
+                        "meta",
+                        format!(
+                            "Manual {label} replay cycle_id: {cycle_id}; exit_code: {exit_code}"
+                        ),
+                    );
+
+                    if !stdout.trim().is_empty() {
+                        guard.push_console("stdout", stdout.clone());
+                    }
+
+                    if !stderr.trim().is_empty() {
+                        guard.push_console("stderr", stderr.clone());
+                    }
+
+                    guard.push_console(
+                        "status",
+                        format!("Manual {label} replay finished; exit_code: {exit_code}"),
+                    );
+
+                    format!(
+                        "Manual {label} replay completed; cycle_id={cycle_id}; exit_code={exit_code}"
+                    )
+                }
+                _ => {
+                    let mut guard = state.lock().await;
+                    guard.execution_active = false;
+                    guard.execution_started_at_ms = None;
+                    guard.high_active = false;
+
+                    return Err("PowerShell returned an unexpected result".into());
+                }
+            };
+
+            // Manual replays are recorded locally. They are not silently
+            // presented to ChatGPT as fresh browser-command responses.
+            append_session_log(&result).await.ok();
+
+            Ok(summary)
+        }
+        Err(error) => {
+            let mut guard = state.lock().await;
+
+            guard.execution_active = false;
+            guard.execution_started_at_ms = None;
+            guard.high_active = false;
+            guard.set_mode("paused").ok();
+
+            guard.push_console(
+                "critical",
+                format!("Manual replay failed: {error}"),
+            );
+
+            Err(error)
+        }
+    }
+}
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum ClientMessage {
@@ -117,6 +301,15 @@ enum ClientMessage {
 }
 
 #[derive(Debug, Serialize)]
+struct ImageAttachment {
+    name: String,
+    mime_type: String,
+    base64_data: String,
+    bytes: usize,
+    channel: u8,
+}
+
+#[derive(Debug, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum ServerMessage {
     Hello { version: &'static str, mode: String },
@@ -130,28 +323,72 @@ enum ServerMessage {
         stderr: String,
         started_at: String,
         finished_at: String,
+        attachments: Vec<ImageAttachment>,
+        attachment_errors: Vec<String>,
     },
     Error { message: String },
 }
 
-pub async fn serve(state: SharedState, port: u16) -> Result<(), String> {
-    let listener = TcpListener::bind(("127.0.0.1", port))
-        .await
-        .map_err(|error| error.to_string())?;
+/// GP_GRACEFUL_STOP_V1
+/// Own both the listening socket and every accepted client task.
+/// Returning from this function means the listener has been dropped
+/// and client tasks have been cancelled and joined.
+pub async fn serve_bound(
+    state: SharedState,
+    listener: TcpListener,
+    mut shutdown: watch::Receiver<bool>,
+) -> Result<(), String> {
+    let mut clients = JoinSet::new();
 
-    loop {
-        let (stream, _) = listener.accept().await.map_err(|error| error.to_string())?;
-        let state = state.clone();
-        tokio::spawn(async move {
-            if let Err(error) = handle_connection(state.clone(), stream).await {
-                let mut guard = state.lock().await;
-                guard.push_console("critical", format!("WebSocket connection error: {error}"));
-                eprintln!("connection error: {error}");
+    let outcome = loop {
+        tokio::select! {
+            biased;
+
+            changed = shutdown.changed() => {
+                if changed.is_err() || *shutdown.borrow() {
+                    break Ok(());
+                }
             }
-        });
-    }
-}
 
+            accepted = listener.accept() => {
+                match accepted {
+                    Ok((stream, _)) => {
+                        let client_state = state.clone();
+
+                        clients.spawn(async move {
+                            if let Err(error) =
+                                handle_connection(client_state.clone(), stream).await
+                            {
+                                let mut guard = client_state.lock().await;
+                                guard.push_console(
+                                    "critical",
+                                    format!("WebSocket connection error: {error}")
+                                );
+                                eprintln!("connection error: {error}");
+                            }
+                        });
+                    }
+
+                    Err(error) => {
+                        break Err(error.to_string());
+                    }
+                }
+            }
+
+            _ = clients.join_next(), if !clients.is_empty() => {}
+        }
+    };
+
+    // Close the listener before reporting shutdown completion.
+    drop(listener);
+
+    // No client may remain attached to an offline Bridge.
+    clients.abort_all();
+
+    while clients.join_next().await.is_some() {}
+
+    outcome
+}
 async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), String> {
     let ws = accept_async(stream).await.map_err(|error| error.to_string())?;
     let (mut sink, mut source) = ws.split();
@@ -235,14 +472,41 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
                 {
                     let mut guard = state.lock().await;
                     guard.push_console("meta", format!("RX command marker: {marker}"));
-                    guard.push_console("command", command.clone());
+                    // Accepted commands are recorded at the execution gate.
                 }
 
-                let is_high = marker == "GPTPS_HIGH";
-                if marker != "GPTPS_EXEC" && !is_high {
+                // Channel-aware strict markers, retaining legacy channel 1.
+                let (marker_kind, channel): (&str, u8) = match marker.split_once(':') {
+                    Some((kind, "1")) => (kind, 1),
+                    Some((kind, "2")) => (kind, 2),
+                    Some((kind, "3")) => (kind, 3),
+                    None => (marker.as_str(), 1),
+                    _ => ("", 0),
+                };
+                let is_high = marker_kind == "GPTPS_HIGH";
+                if (marker_kind != "GPTPS_EXEC" && !is_high) || channel == 0 {
                     state.lock().await.push_console("critical", "Blocked: strict GPTPS_EXEC/GPTPS_HIGH marker missing");
                     send_json(&mut sink, &ServerMessage::Blocked {
                         reason: "strict marker missing".into(),
+                        level: "red".into(),
+                    }).await?;
+                    continue;
+                }
+
+                // A bridge listening on :47178 cannot execute :1 or :3.
+                let configured_port = state.lock().await.port;
+                let expected_port = 47176_u16 + u16::from(channel);
+
+                if configured_port != expected_port {
+                    state.lock().await.push_console(
+                        "critical",
+                        format!(
+                            "Blocked channel mismatch: marker channel {},                              bridge port {}",
+                            channel, configured_port
+                        ),
+                    );
+                    send_json(&mut sink, &ServerMessage::Blocked {
+                        reason: "GP marker channel does not match this bridge".into(),
                         level: "red".into(),
                     }).await?;
                     continue;
@@ -270,15 +534,52 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
                     continue;
                 }
 
-                if is_high {
+                // One active PowerShell process per bridge instance.
+                // This guard applies to both ordinary EXEC and HIGH.
+                let timeout_seconds = {
                     let mut guard = state.lock().await;
-                    guard.high_active = true;
-                    guard.push_console("status", format!("HIGH started · base mode: {mode}"));
-                } else {
-                    state.lock().await.push_console("status", format!("Running in mode: {mode}"));
-                }
 
-                let timeout_seconds = state.lock().await.timeout_seconds;
+                    if guard.execution_active {
+                        guard.push_console(
+                            "status",
+                            "Rejected: another command is already executing",
+                        );
+                        drop(guard);
+
+                        send_json(
+                            &mut sink,
+                            &ServerMessage::Blocked {
+                                reason: "another command is already executing".into(),
+                                level: "orange".into(),
+                            },
+                        )
+                        .await?;
+
+                        continue;
+                    }
+
+                    guard.execution_active = true;
+                    guard.execution_started_at_ms =
+                        Some(Utc::now().timestamp_millis());
+                    guard.last_accepted_command = Some(command.clone());
+                    guard.last_accepted_marker = Some(marker.clone());
+                    guard.push_console("command", command.clone());
+
+                    if is_high {
+                        guard.high_active = true;
+                        guard.push_console(
+                            "status",
+                            format!("HIGH started; base mode: {mode}"),
+                        );
+                    } else {
+                        guard.push_console(
+                            "status",
+                            format!("EXEC started; base mode: {mode}"),
+                        );
+                    }
+
+                    guard.timeout_seconds
+                };
                 let execution = if is_high {
                     run_powershell_high(&command).await
                 } else {
@@ -290,6 +591,8 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
                         if let ServerMessage::CommandResult { cycle_id, exit_code, stdout, stderr, .. } = &result {
                             let failed = *exit_code != 0;
                             let mut guard = state.lock().await;
+                            guard.execution_active = false;
+                            guard.execution_started_at_ms = None;
 
                             if is_high {
                                 guard.high_active = false;
@@ -327,11 +630,29 @@ async fn handle_connection(state: SharedState, stream: TcpStream) -> Result<(), 
                             }
                         }
 
+                        // Log the ordinary result before adding image bytes.
+                        // Base64 image contents must never enter session JSONL.
                         append_session_log(&result).await.ok();
+
+                        let mut result = result;
+                        if let ServerMessage::CommandResult {
+                            stdout,
+                            attachments,
+                            attachment_errors,
+                            ..
+                        } = &mut result {
+                            let (images, errors) =
+                                read_gp_attachments(stdout, channel).await;
+                            *attachments = images;
+                            *attachment_errors = errors;
+                        }
+
                         send_json(&mut sink, &result).await?;
                     }
                     Err(message) => {
                         let mut guard = state.lock().await;
+                        guard.execution_active = false;
+                        guard.execution_started_at_ms = None;
                         guard.high_active = false;
                         guard.mode = "paused".into();
                         guard.attention_armed_at_ms = None;
@@ -485,6 +806,8 @@ exit $__gptpsExit
         stderr: String::new(),
         started_at: started.to_rfc3339(),
         finished_at: finished.to_rfc3339(),
+        attachments: Vec::new(),
+        attachment_errors: Vec::new(),
     })
 }
 
@@ -574,7 +897,285 @@ async fn run_powershell(command: &str, timeout_seconds: u64) -> Result<ServerMes
         stderr: clean_powershell_stderr(&stderr_raw),
         started_at: started.to_rfc3339(),
         finished_at: finished.to_rfc3339(),
+        attachments: Vec::new(),
+        attachment_errors: Vec::new(),
     })
+}
+
+
+fn parse_gp_attach(line: &str) -> Result<(u8, String), String> {
+    let mut fields = line.trim().splitn(4, ' ');
+
+    if fields.next() != Some("GP_ATTACH") {
+        return Err("invalid GP_ATTACH prefix".into());
+    }
+
+    let channel_text = fields
+        .next()
+        .and_then(|value| value.strip_prefix("channel="))
+        .ok_or("missing attachment channel")?;
+
+    let channel: u8 = channel_text
+        .parse()
+        .map_err(|_| "invalid attachment channel")?;
+
+    if !(1..=3).contains(&channel) {
+        return Err("attachment channel must be 1, 2, or 3".into());
+    }
+
+    if fields.next() != Some("type=image") {
+        return Err("only GP_ATTACH type=image is supported".into());
+    }
+
+    let remaining = fields
+        .next()
+        .and_then(|value| value.strip_prefix("path="))
+        .ok_or("missing attachment path")?;
+
+    let path = remaining
+        .split_once(" caption=")
+        .map(|(left, _)| left)
+        .unwrap_or(remaining)
+        .trim()
+        .trim_matches('"')
+        .to_string();
+
+    if path.is_empty() {
+        return Err("empty attachment path".into());
+    }
+
+    Ok((channel, path))
+}
+
+fn verified_image_mime(extension: &str, bytes: &[u8]) -> Option<&'static str> {
+    match extension {
+        "png" if bytes.starts_with(b"\x89PNG\r\n\x1a\n") =>
+            Some("image/png"),
+        "jpg" | "jpeg"
+            if bytes.starts_with(&[0xff, 0xd8, 0xff]) =>
+            Some("image/jpeg"),
+        "webp"
+            if bytes.len() >= 12
+                && &bytes[0..4] == b"RIFF"
+                && &bytes[8..12] == b"WEBP" =>
+            Some("image/webp"),
+        _ => None,
+    }
+}
+
+async fn read_gp_attachments(
+    stdout: &str,
+    channel: u8,
+) -> (Vec<ImageAttachment>, Vec<String>) {
+    const MAX_IMAGES: usize = 3;
+    const MAX_IMAGE_BYTES: u64 = 12 * 1024 * 1024;
+    const MAX_TOTAL_BYTES: usize = 20 * 1024 * 1024;
+
+    let mut images = Vec::new();
+    let mut errors = Vec::new();
+    let mut total_bytes = 0usize;
+
+    let manifest_lines: Vec<&str> = stdout
+        .lines()
+        .filter(|line| line.trim().starts_with("GP_ATTACH "))
+        .collect();
+
+    if manifest_lines.is_empty() {
+        return (images, errors);
+    }
+
+    let root = match tokio::fs::canonicalize(
+        r"U:\UEdevROOT\Game1\Saved",
+    ).await {
+        Ok(root) => root,
+        Err(error) => {
+            errors.push(format!("Image root unavailable: {error}"));
+            return (images, errors);
+        }
+    };
+
+    for line in manifest_lines {
+        if images.len() >= MAX_IMAGES {
+            errors.push("Maximum three GP images per result".into());
+            break;
+        }
+
+        let (requested_channel, filename) = match parse_gp_attach(line) {
+            Ok(value) => value,
+            Err(error) => {
+                errors.push(error);
+                continue;
+            }
+        };
+
+        if requested_channel != channel {
+            errors.push(format!(
+                "Attachment channel {} does not match {}",
+                requested_channel, channel
+            ));
+            continue;
+        }
+
+        let requested_path = PathBuf::from(filename);
+
+        if !requested_path.is_absolute() {
+            errors.push("GP image path must be absolute".into());
+            continue;
+        }
+
+        let resolved = match tokio::fs::canonicalize(&requested_path).await {
+            Ok(path) => path,
+            Err(error) => {
+                errors.push(format!("GP image path unavailable: {error}"));
+                continue;
+            }
+        };
+
+        if !resolved.starts_with(&root) {
+            errors.push("GP image path is outside Game1 Saved".into());
+            continue;
+        }
+
+        let metadata = match tokio::fs::metadata(&resolved).await {
+            Ok(value) => value,
+            Err(error) => {
+                errors.push(format!("GP image metadata error: {error}"));
+                continue;
+            }
+        };
+
+        if !metadata.is_file()
+            || metadata.len() == 0
+            || metadata.len() > MAX_IMAGE_BYTES
+        {
+            errors.push("GP image is empty, too large, or not a file".into());
+            continue;
+        }
+
+        if total_bytes + metadata.len() as usize > MAX_TOTAL_BYTES {
+            errors.push("GP image total size limit exceeded".into());
+            break;
+        }
+
+        let data = match tokio::fs::read(&resolved).await {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                errors.push(format!("GP image read failed: {error}"));
+                continue;
+            }
+        };
+
+        if data.is_empty() || data.len() as u64 > MAX_IMAGE_BYTES {
+            errors.push("GP image size changed during read".into());
+            continue;
+        }
+
+        let extension = resolved
+            .extension()
+            .and_then(|value| value.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+
+        let mime = match verified_image_mime(&extension, &data) {
+            Some(mime) => mime,
+            None => {
+                errors.push(
+                    "GP image extension or file signature invalid".into()
+                );
+                continue;
+            }
+        };
+
+        let name = resolved
+            .file_name()
+            .map(|value| value.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "image".into());
+
+        total_bytes += data.len();
+
+        images.push(ImageAttachment {
+            name,
+            mime_type: mime.into(),
+            base64_data: STANDARD.encode(&data),
+            bytes: data.len(),
+            channel,
+        });
+    }
+
+    (images, errors)
+}
+
+#[cfg(test)]
+mod gp_attach_tests {
+    use super::{parse_gp_attach, verified_image_mime};
+
+    #[test]
+    fn parser_preserves_spaces_in_windows_paths() {
+        let parsed = parse_gp_attach(
+            r"GP_ATTACH channel=2 type=image path=U:\Game1 Folder\image.png"
+        ).unwrap();
+        assert_eq!(parsed.0, 2);
+        assert_eq!(parsed.1, r"U:\Game1 Folder\image.png");
+    }
+
+    #[test]
+    fn invalid_channel_is_rejected() {
+        assert!(parse_gp_attach(
+            r"GP_ATTACH channel=4 type=image path=C:\x.png"
+        ).is_err());
+    }
+
+    #[test]
+    fn image_magic_must_match_extension() {
+        let png = b"\x89PNG\r\n\x1a\nsample";
+        assert_eq!(verified_image_mime("png", png), Some("image/png"));
+        assert_eq!(verified_image_mime("jpg", png), None);
+    }
+
+    #[tokio::test]
+    async fn real_game1_png_roundtrip_v1() {
+        use base64::Engine as _;
+
+        let path = r"U:\UEdevROOT\Game1\Saved\G1HeadwatersVisualStaging\headwaters_visual_comparison_v1.png";
+
+        let original_bytes = tokio::fs::read(path)
+            .await
+            .expect("Real Game1 test PNG must exist");
+
+        let manifest = format!(
+            "BEFORE\nGP_ATTACH channel=1 type=image path={path}\nAFTER"
+        );
+
+        let (images, errors) =
+            super::read_gp_attachments(&manifest, 1).await;
+
+        assert!(errors.is_empty(), "Transport errors: {:?}", errors);
+        assert_eq!(images.len(), 1);
+
+        let image = &images[0];
+
+        assert_eq!(image.channel, 1);
+        assert_eq!(image.name, "headwaters_visual_comparison_v1.png");
+        assert_eq!(image.mime_type, "image/png");
+        assert_eq!(image.bytes, original_bytes.len());
+
+        let decoded = base64::engine::general_purpose::STANDARD
+            .decode(&image.base64_data)
+            .expect("Base64 transport must decode");
+
+        assert_eq!(decoded, original_bytes);
+
+        let (wrong_images, wrong_errors) =
+            super::read_gp_attachments(&manifest, 2).await;
+
+        assert!(wrong_images.is_empty());
+        assert!(!wrong_errors.is_empty());
+
+        println!("REAL_GAME1_PNG_READ=PASS");
+        println!("PNG_BASE64_BYTE_ROUNDTRIP=PASS");
+        println!("WRONG_CHANNEL_IMAGE=BLOCKED");
+        println!("REAL_PNG_BYTES={}", original_bytes.len());
+    }
 }
 
 async fn append_session_log(message: &ServerMessage) -> Result<(), String> {

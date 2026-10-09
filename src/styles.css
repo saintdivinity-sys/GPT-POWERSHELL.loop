@@ -204,3 +204,2718 @@ html.overlay-mode #root {
   header { align-items: flex-start; }
   .headerControls { flex-direction: column-reverse; align-items: flex-end; }
 }
+
+
+.gpDesktopChannelPicker {
+  display: flex;
+  gap: 7px;
+  margin: 10px 0;
+  flex-wrap: wrap;
+}
+
+.gpDesktopChannel {
+  flex: 1;
+  min-width: 85px;
+  padding: 9px 6px;
+  border-radius: 7px;
+  border: 1px solid rgba(140, 160, 190, .45);
+  cursor: pointer;
+}
+
+.gpDesktopChannel.selected {
+  background: #28664b;
+  border-color: #65c799;
+  color: white;
+}
+
+.gpDesktopChannel:disabled {
+  cursor: default;
+  opacity: .75;
+}
+
+
+/* GP Control Center - luxury automotive graphite/bronze dashboard */
+.app {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 20px 24px 26px;
+  min-height: 100vh;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 72% -10%, rgba(159,100,68,.12), transparent 55%),
+    radial-gradient(ellipse at -10% 70%, rgba(58,75,104,.15), transparent 60%),
+    #0d1015;
+}
+
+.app > header {
+  padding: 12px 0 20px;
+  border-bottom: 1px solid rgba(223,204,183,.09);
+}
+
+.app > header h1 {
+  font-size: 24px;
+  font-weight: 670;
+  letter-spacing: -.035em;
+}
+
+.ccControlCenter {
+  display: grid;
+  grid-template-columns: 166px minmax(0,1fr);
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.ccRail {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 17px 11px;
+  background: linear-gradient(170deg,#171c23,#12171d);
+  border: 1px solid rgba(228,214,199,.10);
+  border-radius: 20px;
+}
+
+.ccRailHeading, .ccEyebrow {
+  font-size: 10px;
+  letter-spacing: .16em;
+  font-weight: 760;
+  color: #b5a18f;
+}
+
+.ccRailHeading { padding: 0 12px 8px; }
+
+.ccRailChannel {
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  padding: 12px 9px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+  background: transparent;
+  transition: background .2s, border-color .2s, transform .2s;
+}
+
+.ccRailChannel:hover { background: #232a33; }
+.ccRailChannel.selected {
+  background: linear-gradient(125deg,rgba(99,86,123,.34),rgba(114,82,56,.20));
+  border-color: rgba(195,156,134,.4);
+}
+
+.ccRailNumber {
+  width: 30px;
+  height: 32px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: #29303b;
+  font-weight: 720;
+}
+
+.ccRailText { display: grid; gap: 3px; min-width: 0; }
+.ccRailText strong { font-size: 12px; white-space: nowrap; }
+.ccRailText small { font-size: 10px; color: #8b99a7; }
+
+.ccRailDot {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #68707a;
+}
+
+.ccRailDot.online, .ccStatusOrb.online {
+  background: #70e5a9;
+  box-shadow: 0 0 13px rgba(91,234,161,.65);
+}
+
+.ccRailBottom {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: auto;
+  padding: 18px 8px 4px;
+  font-size: 9px;
+  letter-spacing: .04em;
+  color: #9ba6b4;
+}
+
+.ccRailBottom .ccRailDot { margin: 0; }
+.ccWorkspace { min-width: 0; }
+.ccTopline { display:flex; justify-content:space-between; gap:12px; align-items:center; padding:8px 3px 18px; }
+.ccTopline h2 { margin: 4px 0; font-size: 27px; letter-spacing: -.04em; }
+.ccTopline p { margin: 0; color: #97a0ae; font-size: 12px; }
+.ccPortLabel { font-size: 11px; color: #cfb59c; white-space:nowrap; }
+
+.ccCardRow { display: flex; gap: 12px; align-items: stretch; min-height: 380px; }
+.ccChannelCard {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  margin: 0;
+  padding: 20px 14px 16px;
+  overflow: hidden;
+  border: 1px solid rgba(192,174,168,.18);
+  border-radius: 21px;
+  background:
+    radial-gradient(ellipse at 85% 0%,rgba(108,83,131,.12),transparent 65%),
+    linear-gradient(160deg,#20252e,#151a22 88%);
+  box-shadow: 0 14px 36px rgba(0,0,0,.18);
+  transition: flex .4s cubic-bezier(.2,.75,.2,1), border-color .3s;
+}
+
+.ccChannelCard.ccCompact { flex: .82; cursor: default; }
+.ccChannelCard.ccFocused {
+  flex: 2.15;
+  padding: 22px 18px 18px;
+  border-color: rgba(217,172,133,.55);
+  box-shadow: 0 18px 48px rgba(0,0,0,.31),0 0 20px rgba(203,139,112,.09);
+}
+
+.ccNeonStrip {
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 3px;
+  border-radius: 999px;
+  opacity: .48;
+  background: linear-gradient(90deg,#bb9578,#ad7fa3,#78a8df,#dfad82);
+  background-size: 250% 100%;
+  pointer-events: none;
+}
+
+.ccNeonStrip.running {
+  opacity: 1;
+  animation: ccColorFlow 5.2s linear infinite,ccBreathe 2.8s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(144,135,232,.6),0 0 18px rgba(189,115,204,.28);
+}
+
+.ccNeonStrip.high {
+  background: linear-gradient(90deg,#a31940,#f74756,#ffb167,#cf2052,#f74756);
+  background-size: 250% 100%;
+}
+
+.ccNeonStrip.running::after {
+  content: "";
+  position: absolute;
+  top: -14px;
+  left: 0;
+  width: 44px;
+  height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse,rgba(242,231,255,.94),rgba(169,108,244,.67) 32%,transparent 75%);
+  filter: blur(9px);
+  animation: ccOrbTravel 5.2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.ccNeonStrip.high::after {
+  background: radial-gradient(ellipse,#fff1d8,rgba(255,61,96,.92) 35%,transparent 75%);
+}
+
+@keyframes ccColorFlow {
+  to { background-position: 250% 0; }
+}
+@keyframes ccBreathe {
+  0%,100% { opacity:.55; }
+  50% { opacity:1; }
+}
+@keyframes ccOrbTravel {
+  from { left:0; }
+  to { left:calc(100% - 44px); }
+}
+
+.ccCardTitle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  margin: 0 0 15px;
+  border: none;
+  background: none;
+  font-weight: 710;
+  font-size: 18px;
+  text-align: left;
+  letter-spacing: -.03em;
+}
+.ccCardTitle:hover { background: none; color:#f6ded0; }
+.ccFocused .ccCardTitle { font-size: 26px; }
+.ccChevron { color:#bd9e8c; font-size:14px; }
+.ccCardStatus { display:flex; gap:7px; align-items:center; flex-wrap:wrap; color:#9caab7; font-size:11px; }
+.ccStatusOrb { width:8px; height:8px; border-radius:50%; background:#777b85; }
+.ccModeTag {
+  margin-left: auto;
+  padding: 5px 7px;
+  border-radius: 7px;
+  background: #30313e;
+  border: 1px solid #414453;
+  color: #c0c8d6;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.ccModeTag.high { color:#ffabb0; background:#4b232d; border-color:#a24655; }
+.ccCommandPreview { display:grid; gap:8px; margin:18px 0; padding:13px; background:#10151c; border:1px solid #333941; border-radius:12px; }
+.ccCommandPreview small {font-size:9px;color:#9d9fad;letter-spacing:.08em;}
+.ccCommandPreview code {font-size:11px;color:#d1d5dc;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;max-height:95px;overflow:auto;}
+.ccCompact .ccCommandPreview code {display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.ccExecutionStatus {display:flex;gap:8px;align-items:center;color:#c9b9aa;font-size:12px;margin:12px 0;}
+.ccPulseDot,.ccQuietDot {width:8px;height:8px;border-radius:50%;background:#c69a80;}
+.ccPulseDot {animation:ccBreathe 1.6s infinite;box-shadow:0 0 15px #da8278;}
+.ccQuietDot {background:#767e89;}
+.ccPrimaryActions,.ccModeControls {display:flex;gap:7px;flex-wrap:wrap;margin:9px 0;}
+.ccPrimaryActions button,.ccModeControls button {margin:0;flex:1;min-width:84px;font-size:11px;padding:10px 8px;}
+.ccStopButton {background:#642b38;border-color:#ab4f61;}
+.ccStopButton:disabled {opacity:.52;}
+.ccPrimaryButton {background:linear-gradient(90deg,#8f5544,#806096);border-color:#c38e80;}
+.ccStorageTiles {display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:18px 0;}
+.ccStorageTiles > div {display:grid;gap:7px;padding:12px;background:#252a33;border:1px solid #353a43;border-radius:12px;}
+.ccStorageTiles span {font-size:10px;color:#9aa3b1;}
+.ccStorageTiles strong {font-size:13px;overflow-wrap:anywhere;}
+.ccMiniGroup {margin:9px 0;padding:0 10px;border:1px solid #353941;border-radius:10px;background:rgba(15,19,25,.46);}
+.ccMiniGroup summary {padding:11px 0;color:#c2b7b3;font-size:11px;cursor:pointer;}
+.ccMiniGroup p {font-size:11px;color:#a5a9b0;line-height:1.55;}
+.ccMiniGroup pre {max-height:190px;font-size:11px;}
+.ccNotBound {padding:15px;color:#a3aab5;font-size:12px;line-height:1.6;}
+.ccCompactFooter {display:flex;justify-content:space-between;color:#aa9a90;font-size:11px;gap:8px;}
+.ccPanels {display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:12px;margin-top:14px;}
+.ccLogPanel,.ccActivityPanel {min-width:0;border:1px solid #34333b;background:#171b23;border-radius:15px;overflow:hidden;}
+.ccLogPanel summary,.ccActivityPanel summary {padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;font-size:12px;font-weight:680;list-style:none;}
+.ccCount {color:#9b9fa9;font-size:10px;font-weight:450;}
+.ccPanelBody {padding:0 12px 12px;}
+.ccPanelBody p {font-size:11px;color:#a2aab5;line-height:1.5;}
+.ccLogToolbar {display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:10px;color:#9ea9b5;}
+.ccLogToolbar button {margin:0;padding:6px 9px;font-size:10px;}
+.ccLogOutput {max-height:245px;min-height:160px;overflow:auto;padding:11px;border-radius:10px;background:#0e131a;font-family:Consolas,'Cascadia Mono',monospace;}
+.ccLogEntry {display:grid;grid-template-columns:66px 63px minmax(0,1fr);gap:8px;align-items:start;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:10px;}
+.ccLogEntry time {color:#76869b;}
+.ccLogEntry span {color:#87b1d8;}
+.ccLogEntry.stdout span {color:#79c69b;}
+.ccLogEntry.stderr span,.ccLogEntry.critical span {color:#f48f9f;}
+.ccLogEntry code {white-space:pre-wrap;overflow-wrap:anywhere;color:#c6d0db;font-size:10px;}
+.ccEmpty {color:#86919d;font-size:12px;}
+@media (max-width: 1050px) {
+  .ccControlCenter {grid-template-columns:125px minmax(0,1fr);gap:10px;}
+  .ccRailText {display:none;}
+  .ccCardRow {gap:7px;}
+  .ccChannelCard {padding:16px 9px;}
+  .ccChannelCard.ccFocused {padding:18px 12px;}
+  .ccCompact .ccCardTitle {font-size:14px;}
+  .ccCompact .ccModeTag {margin:4px 0;}
+  .ccCompact .ccCommandPreview {padding:8px;}
+  .ccPanels {grid-template-columns:1fr;}
+}
+@media (max-width: 680px) {
+  .ccControlCenter {display:block;}
+  .ccRail {flex-direction:row;margin-bottom:12px;align-items:center;}
+  .ccRailHeading,.ccRailBottom {display:none;}
+  .ccCardRow {flex-direction:column;}
+  .ccChannelCard.ccCompact,.ccChannelCard.ccFocused {flex:auto;}
+  .ccCommandPreview {margin:10px 0;}
+  .ccCompact .ccCommandPreview {display:none;}
+}
+@media (prefers-reduced-motion: reduce) {
+  .ccNeonStrip.running,.ccNeonStrip.running::after,.ccPulseDot {animation:none;}
+  .ccChannelCard {transition:none;}
+}
+
+
+/* ccVisualV2 - Obsidian / Champagne / Automotive Neon */
+
+:root {
+  color: #f0edf0;
+  background: #0b0e14;
+}
+
+body {
+  background:
+    radial-gradient(ellipse 75% 45% at 70% 0%,
+      rgba(126, 80, 106, .12), transparent 78%),
+    radial-gradient(ellipse 55% 65% at 0% 85%,
+      rgba(127, 94, 65, .07), transparent 85%),
+    #0b0e14;
+}
+
+.app {
+  padding: 19px 27px 28px;
+  max-width: 1680px;
+}
+
+.app > header {
+  padding: 9px 0 21px;
+  border-bottom-color: rgba(218, 195, 176, .11);
+}
+
+.app > header > div:first-child {
+  position: relative;
+  padding-left: 54px;
+}
+
+.app > header > div:first-child::before {
+  content: "GP";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background:
+    linear-gradient(145deg,#6b5557,#3b3b61 60%,#353f58);
+  border: 1px solid rgba(235,185,155,.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.16),
+    0 0 20px rgba(165,116,181,.14);
+  color: #f5e4d9;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -.04em;
+}
+
+.app > header h1 {
+  font-size: 23px;
+  letter-spacing: -.055em;
+  font-weight: 720;
+}
+
+.eyebrow {
+  color: #b39e9d;
+  font-size: 9px;
+  letter-spacing: .2em;
+}
+
+.ccControlCenter {
+  grid-template-columns: 165px minmax(0,1fr);
+  gap: 19px;
+}
+
+.ccRail {
+  background:
+    linear-gradient(155deg,rgba(35,38,49,.90),rgba(17,21,28,.95));
+  border-color: rgba(217,189,169,.13);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 14px 35px rgba(0,0,0,.1);
+}
+
+.ccRailChannel.selected {
+  background:
+    linear-gradient(115deg,rgba(115,84,110,.31),rgba(143,106,76,.17));
+  border-color: rgba(206,156,139,.38);
+  box-shadow: inset 0 0 19px rgba(196,136,128,.04);
+}
+
+.ccTopline h2 {
+  font-size: 29px;
+  font-weight: 740;
+}
+
+.ccTopline p {
+  color: #8994a5;
+}
+
+.ccCardRow {
+  align-items: center;
+  gap: 13px;
+  min-height: 520px;
+}
+
+.ccChannelCard {
+  background:
+    radial-gradient(ellipse at 95% 0%,
+      rgba(104,84,112,.16),transparent 62%),
+    linear-gradient(156deg,#242732 0%,#191e28 55%,#131821);
+  border-color: rgba(185,175,176,.15);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 19px 45px rgba(0,0,0,.18);
+  transition:
+    flex .42s cubic-bezier(.22,.75,.2,1),
+    min-height .42s cubic-bezier(.22,.75,.2,1),
+    border-color .3s,
+    box-shadow .3s;
+}
+
+.ccChannelCard.ccCompact {
+  flex: .79;
+  min-height: 365px;
+  max-height: 405px;
+}
+
+.ccChannelCard.ccFocused {
+  flex: 2.15;
+  min-height: 510px;
+  padding: 26px 22px 21px;
+  background:
+    radial-gradient(ellipse at 75% 0%,
+      rgba(118,75,110,.2), transparent 55%),
+    radial-gradient(ellipse at 8% 100%,
+      rgba(147,102,67,.10), transparent 65%),
+    linear-gradient(158deg,#252731,#1b2029 64%,#171b24);
+  border-color: rgba(215,159,127,.54);
+  box-shadow:
+    inset 0 1px 0 rgba(255,231,208,.12),
+    0 24px 65px rgba(0,0,0,.38),
+    0 0 24px rgba(210,142,105,.08);
+}
+
+.ccChannelCard.ccFocused::before {
+  content: "";
+  position: absolute;
+  width: 58%;
+  height: 140px;
+  right: -18%;
+  top: -94px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse,
+    rgba(166,111,135,.17),transparent 72%);
+  filter: blur(28px);
+}
+
+.ccCardTitle {
+  color: #f4f1f2;
+}
+
+.ccFocused .ccCardTitle {
+  font-size: 29px;
+}
+
+.ccModeTag {
+  border-color: rgba(204,191,190,.15);
+  background: rgba(89,83,107,.26);
+}
+
+.ccCommandPreview {
+  background:
+    linear-gradient(155deg,rgba(14,18,26,.96),rgba(19,23,32,.93));
+  border-color: rgba(183,177,192,.17);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.27);
+}
+
+.ccFocused .ccCommandPreview {
+  padding: 16px;
+  min-height: 88px;
+}
+
+.ccCommandPreview code {
+  color: #e3dce2;
+  font-size: 11px;
+}
+
+.ccPrimaryActions button,
+.ccModeControls button {
+  border-radius: 10px;
+}
+
+.ccStopButton:not(:disabled) {
+  background: linear-gradient(110deg,#7c3346,#ab4a52);
+  border-color: #d16a72;
+  color: #fff1f2;
+  box-shadow: 0 0 19px rgba(225,75,102,.18);
+}
+
+.ccStorageTiles > div {
+  background: linear-gradient(130deg,#2b2e38,#222731);
+  border-color: rgba(196,182,184,.12);
+}
+
+.ccMiniGroup {
+  background: rgba(10,14,21,.34);
+  border-color: rgba(190,185,194,.13);
+}
+
+.ccMiniGroup summary:hover {
+  color: #ead1be;
+}
+
+.ccNeonStrip {
+  left: 20px;
+  right: 20px;
+  height: 3px;
+  opacity: .75;
+  background:
+    linear-gradient(90deg,#b99172,#c98db6,#8daff1,#e5b78b);
+  box-shadow: 0 0 10px rgba(181,126,149,.23);
+}
+
+.ccChannelCard.ccFocused .ccNeonStrip:not(.running) {
+  opacity: .9;
+  box-shadow:
+    0 0 13px rgba(183,126,165,.30),
+    0 0 24px rgba(190,145,108,.13);
+}
+
+.ccNeonStrip.running {
+  height: 4px;
+  background:
+    linear-gradient(90deg,
+      #f38d7f,#d765cf,#7e91ff,#66dbd5,#e9b675,#f38d7f);
+  background-size: 240% 100%;
+  box-shadow:
+    0 0 12px rgba(157,134,247,.78),
+    0 0 35px rgba(166,102,214,.38);
+}
+
+.ccNeonStrip.high {
+  background:
+    linear-gradient(90deg,
+      #7c182b,#d72b51,#ff8466,#ffb78a,#bd123c);
+  background-size: 240% 100%;
+  box-shadow:
+    0 0 14px rgba(240,60,76,.75),
+    0 0 31px rgba(204,32,61,.38);
+}
+
+.ccNeonStrip.running::after {
+  width: 62px;
+  height: 46px;
+  top: -22px;
+  filter: blur(12px);
+  background: radial-gradient(ellipse,
+    rgba(250,240,255,.98) 0%,
+    rgba(181,139,255,.92) 17%,
+    rgba(116,186,253,.65) 37%,
+    transparent 78%);
+  animation: ccOrbTravelV2 5.5s ease-in-out infinite alternate;
+}
+
+.ccNeonStrip.high::after {
+  background: radial-gradient(ellipse,
+    #fff7e7 0%,
+    rgba(255,148,127,.97) 24%,
+    rgba(237,38,76,.70) 45%,
+    transparent 77%);
+}
+
+.ccChannelCard.ccExecuting {
+  box-shadow:
+    0 22px 60px rgba(0,0,0,.35),
+    0 0 20px rgba(134,116,238,.16);
+}
+
+.ccChannelCard.ccHighRunning {
+  border-color: rgba(245,86,105,.65);
+  box-shadow:
+    0 22px 60px rgba(0,0,0,.35),
+    0 0 23px rgba(235,56,83,.16);
+}
+
+@keyframes ccOrbTravelV2 {
+  0% { left: 0; }
+  100% { left: calc(100% - 62px); }
+}
+
+.ccLogPanel,
+.ccActivityPanel {
+  border-color: rgba(201,187,186,.14);
+  background: linear-gradient(145deg,#1d212b,#151a22);
+}
+
+.ccLogOutput {
+  background: #10151d;
+  scrollbar-color: #55556b #12151c;
+  scrollbar-width: thin;
+}
+
+.ccLogEntry {
+  border-bottom-color: rgba(255,255,255,.03);
+}
+
+@media(max-width:1050px) {
+  .ccCardRow { min-height: 470px; }
+  .ccChannelCard.ccCompact { min-height: 320px; }
+  .ccChannelCard.ccFocused { min-height: 450px; }
+}
+
+@media(max-width:680px) {
+  .ccCardRow { min-height: 0; }
+  .ccChannelCard.ccCompact { min-height: 110px; }
+  .ccChannelCard.ccFocused { min-height: 0; }
+}
+
+@media(prefers-reduced-motion:reduce) {
+  .ccNeonStrip.running::after { animation: none; }
+}
+
+
+/* GP_LAYOUT_FIX_960_V1
+   Compact window: active center, two side cards, visible lower panels.
+*/
+
+.app {
+    width: 100%;
+    max-width: 1680px;
+    padding: 15px 18px 18px;
+}
+
+.ccControlCenter {
+    min-width: 0;
+}
+
+.ccWorkspace {
+    min-width: 0;
+    width: 100%;
+}
+
+.ccCardRow {
+    min-width: 0;
+}
+
+.ccChannelCard {
+    min-width: 0;
+}
+
+@media (min-width: 761px) and (max-width: 1180px) {
+
+    .app {
+        padding: 12px 15px 16px;
+    }
+
+    .app > header {
+        padding: 5px 0 14px;
+    }
+
+    .ccControlCenter {
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1fr);
+        gap: 12px;
+        margin-top: 12px;
+    }
+
+    .ccRail {
+        width: 64px;
+        min-width: 0;
+        padding: 12px 6px;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .ccRailHeading,
+    .ccRailText {
+        display: none;
+    }
+
+    .ccRailChannel {
+        width: 48px;
+        min-height: 50px;
+        margin: 0;
+        padding: 7px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .ccRailNumber {
+        width: 33px;
+        height: 33px;
+        flex-shrink: 0;
+    }
+
+    .ccRailChannel .ccRailDot {
+        position: absolute;
+        top: 5px;
+        right: 4px;
+        width: 6px;
+        height: 6px;
+    }
+
+    .ccRailBottom {
+        margin-top: auto;
+        padding: 8px 0;
+        justify-content: center;
+        font-size: 0;
+    }
+
+    .ccRailBottom .ccRailDot {
+        display: block;
+        width: 8px;
+        height: 8px;
+    }
+
+    .ccTopline {
+        padding: 5px 2px 12px;
+    }
+
+    .ccTopline h2 {
+        font-size: 25px;
+    }
+
+    .ccCardRow {
+        display: grid;
+        grid-template-columns:
+            minmax(0, .75fr)
+            minmax(0, 2.15fr)
+            minmax(0, .75fr);
+        align-items: center;
+        gap: 10px;
+        min-height: 0;
+    }
+
+    .ccChannelCard.ccCompact {
+        width: 100%;
+        min-height: 285px;
+        max-height: 330px;
+        padding: 17px 10px;
+    }
+
+    .ccChannelCard.ccFocused {
+        width: 100%;
+        min-height: 425px;
+        padding: 19px 17px;
+        align-self: center;
+    }
+
+    .ccFocused .ccCardTitle {
+        font-size: 25px;
+    }
+
+    .ccCompact .ccCardTitle {
+        font-size: 14px;
+    }
+
+    .ccCompact .ccCommandPreview {
+        padding: 9px;
+        margin: 14px 0;
+    }
+
+    .ccCompact .ccCommandPreview code {
+        font-size: 10px;
+        overflow-wrap: anywhere;
+    }
+
+    .ccCompactFooter {
+        flex-wrap: wrap;
+    }
+
+    .ccPrimaryActions,
+    .ccModeControls {
+        gap: 6px;
+    }
+
+    .ccPrimaryActions button,
+    .ccModeControls button {
+        min-width: 0;
+        padding: 9px 5px;
+        font-size: 10px;
+    }
+
+    .ccStorageTiles {
+        margin: 12px 0;
+        gap: 7px;
+    }
+
+    .ccStorageTiles > div {
+        padding: 10px;
+    }
+
+    .ccPanels {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 205px;
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .ccLogPanel,
+    .ccActivityPanel {
+        min-width: 0;
+    }
+
+    .ccLogOutput {
+        min-height: 140px;
+        max-height: 175px;
+    }
+
+    .ccLogEntry {
+        grid-template-columns: 55px 52px minmax(0, 1fr);
+        gap: 5px;
+    }
+}
+
+@media (max-width: 760px) {
+
+    .app {
+        padding: 12px;
+    }
+
+    .ccControlCenter {
+        display: block;
+    }
+
+    .ccRail {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        padding: 8px;
+        margin-bottom: 12px;
+    }
+
+    .ccRailHeading,
+    .ccRailText,
+    .ccRailBottom {
+        display: none;
+    }
+
+    .ccCardRow {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        min-height: 0;
+    }
+
+    .ccChannelCard.ccFocused {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        min-height: 0;
+    }
+
+    .ccChannelCard.ccCompact {
+        grid-row: 2;
+        min-height: 165px;
+        max-height: none;
+    }
+
+    .ccPanels {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ccLogOutput {
+        max-height: 200px;
+    }
+}
+
+
+/* ccCarouselDragV1 */
+
+.ccChannelCard {
+  transform:
+    translateX(var(--cc-drag-x, 0px))
+    scale(var(--cc-drag-scale, 1));
+}
+
+.ccChannelCard.ccDragging {
+  z-index: 10;
+  transition: none !important;
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, .44),
+    0 0 30px rgba(185, 129, 183, .23);
+}
+
+.ccCardTitle {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+}
+
+.ccChannelCard.ccDragging .ccCardTitle {
+  cursor: grabbing;
+}
+
+.ccChannelCard.ccCompact {
+  flex: 1.05;
+  min-height: 360px;
+  max-height: 430px;
+}
+
+.ccChannelCard.ccFocused {
+  flex: 2.1;
+}
+
+@media (min-width: 761px) and (max-width: 1180px) {
+  .ccCardRow {
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1.85fr)
+      minmax(0, 1fr);
+  }
+
+  .ccChannelCard.ccCompact {
+    min-height: 325px;
+    max-height: 410px;
+  }
+
+  .ccChannelCard.ccFocused {
+    min-height: 440px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ccChannelCard {
+    transition: none !important;
+  }
+}
+
+
+/* CC_COSMOS_STORAGE_V1 */
+.ccAppRoot {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+}
+
+.ccCosmos {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 15% 12%, rgba(122, 151, 255, 0.10), transparent 26%),
+    radial-gradient(circle at 82% 18%, rgba(170, 121, 255, 0.10), transparent 24%),
+    radial-gradient(circle at 55% 78%, rgba(120, 235, 255, 0.06), transparent 24%),
+    linear-gradient(180deg, #060812 0%, #090c16 42%, #05070d 100%);
+}
+
+.ccCosmos::before,
+.ccCosmos::after {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  pointer-events: none;
+}
+
+.ccCosmos::before {
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,.09), transparent 1.2%),
+    radial-gradient(circle at 65% 45%, rgba(151,175,255,.18), transparent 1.8%),
+    radial-gradient(circle at 76% 22%, rgba(255,255,255,.08), transparent 1.1%),
+    radial-gradient(circle at 52% 64%, rgba(196,151,255,.15), transparent 1.4%),
+    radial-gradient(circle at 20% 70%, rgba(160,220,255,.12), transparent 1.2%);
+  opacity: .9;
+  filter: blur(.2px);
+}
+
+.ccCosmos::after {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,.015), transparent 60%),
+    linear-gradient(120deg, transparent 0%, rgba(255,255,255,.03) 50%, transparent 100%);
+  mix-blend-mode: screen;
+  opacity: .65;
+}
+
+.ccNebula,
+.ccStarfield,
+.ccOrbitLines,
+.ccGlowBursts,
+.ccEnergyOrbs,
+.ccComets {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ccNebula {
+  filter: blur(50px);
+  opacity: .65;
+}
+
+.ccNebulaA {
+  background:
+    radial-gradient(circle at 18% 24%, rgba(123, 161, 255, .16), transparent 24%),
+    radial-gradient(circle at 68% 30%, rgba(197, 131, 255, .13), transparent 22%);
+  animation: ccNebulaDriftA 24s ease-in-out infinite alternate;
+}
+
+.ccNebulaB {
+  background:
+    radial-gradient(circle at 74% 68%, rgba(143, 226, 255, .10), transparent 22%),
+    radial-gradient(circle at 34% 74%, rgba(255, 255, 255, .06), transparent 18%);
+  animation: ccNebulaDriftB 31s ease-in-out infinite alternate;
+}
+
+.ccStarfield {
+  opacity: .9;
+  background-repeat: repeat;
+}
+
+.ccStarfieldFar {
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,.50) 0 1px, transparent 1.2px),
+    radial-gradient(circle, rgba(153,181,255,.30) 0 1px, transparent 1.2px);
+  background-size: 160px 160px, 220px 220px;
+  background-position: 10px 20px, 80px 120px;
+  animation: ccStarsDriftFar 50s linear infinite;
+}
+
+.ccStarfieldMid {
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,.65) 0 1.2px, transparent 1.4px),
+    radial-gradient(circle, rgba(196,156,255,.40) 0 1.4px, transparent 1.6px),
+    radial-gradient(circle, rgba(130,218,255,.34) 0 1.1px, transparent 1.3px);
+  background-size: 120px 120px, 180px 180px, 210px 210px;
+  background-position: 0 0, 55px 40px, 90px 120px;
+  animation: ccStarsDriftMid 34s linear infinite;
+}
+
+.ccStarfieldNear {
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,.95) 0 1.5px, transparent 1.8px),
+    radial-gradient(circle, rgba(165,196,255,.65) 0 1.8px, transparent 2px),
+    radial-gradient(circle, rgba(224,196,255,.58) 0 2px, transparent 2.2px);
+  background-size: 90px 90px, 140px 140px, 200px 200px;
+  background-position: 18px 16px, 60px 70px, 140px 50px;
+  animation: ccStarsDriftNear 22s linear infinite;
+}
+
+.ccOrbitLines span,
+.ccGlowBursts span,
+.ccEnergyOrbs span,
+.ccComets span {
+  position: absolute;
+  display: block;
+}
+
+.ccOrbitLines span {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(154, 177, 255, .28), transparent);
+  box-shadow: 0 0 18px rgba(136, 167, 255, .18);
+  transform-origin: center center;
+  opacity: .55;
+  animation: ccLinePulse 8s ease-in-out infinite;
+}
+
+.ccOrbitLines span:nth-child(1) { top: 18%; left: 10%; width: 34%; transform: rotate(9deg); animation-delay: 0s; }
+.ccOrbitLines span:nth-child(2) { top: 26%; right: 8%; width: 28%; transform: rotate(-18deg); animation-delay: 1.1s; }
+.ccOrbitLines span:nth-child(3) { top: 49%; left: 12%; width: 22%; transform: rotate(-31deg); animation-delay: 2.2s; }
+.ccOrbitLines span:nth-child(4) { top: 56%; right: 11%; width: 30%; transform: rotate(18deg); animation-delay: .6s; }
+.ccOrbitLines span:nth-child(5) { bottom: 22%; left: 22%; width: 36%; transform: rotate(11deg); animation-delay: 2.8s; }
+.ccOrbitLines span:nth-child(6) { bottom: 14%; right: 14%; width: 26%; transform: rotate(-14deg); animation-delay: 1.8s; }
+
+.ccGlowBursts span {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(255,255,255,.95) 0%, rgba(174,197,255,.55) 24%, rgba(0,0,0,0) 72%);
+  filter: blur(1px);
+  opacity: 0;
+  animation: ccBurstPulse 10s ease-in-out infinite;
+}
+
+.ccGlowBursts span:nth-child(1) { top: 18%; left: 34%; animation-delay: .4s; }
+.ccGlowBursts span:nth-child(2) { top: 44%; right: 26%; animation-delay: 2.6s; }
+.ccGlowBursts span:nth-child(3) { bottom: 26%; left: 40%; animation-delay: 5.2s; }
+.ccGlowBursts span:nth-child(4) { bottom: 16%; right: 18%; animation-delay: 7.7s; }
+
+.ccEnergyOrbs span {
+  width: 150px;
+  height: 150px;
+  border-radius: 999px;
+  filter: blur(28px);
+  mix-blend-mode: screen;
+  opacity: .22;
+  animation: ccOrbFloat 18s ease-in-out infinite;
+}
+
+.ccEnergyOrbs span:nth-child(1) {
+  top: 8%;
+  left: 2%;
+  background: radial-gradient(circle, rgba(132,171,255,.72) 0%, rgba(132,171,255,0) 70%);
+  animation-delay: 0s;
+}
+.ccEnergyOrbs span:nth-child(2) {
+  top: 26%;
+  right: -2%;
+  background: radial-gradient(circle, rgba(209,150,255,.62) 0%, rgba(209,150,255,0) 72%);
+  animation-delay: 4s;
+}
+.ccEnergyOrbs span:nth-child(3) {
+  bottom: 10%;
+  left: 30%;
+  background: radial-gradient(circle, rgba(132,225,255,.52) 0%, rgba(132,225,255,0) 72%);
+  animation-delay: 8s;
+}
+
+.ccComets span {
+  width: 180px;
+  height: 2px;
+  border-radius: 999px;
+  opacity: 0;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(170,197,255,.45) 45%, rgba(255,255,255,.95) 100%);
+  box-shadow:
+    0 0 18px rgba(170,197,255,.22),
+    0 0 34px rgba(204,172,255,.11);
+  transform: rotate(-28deg);
+  animation: ccCometFly 12s linear infinite;
+}
+
+.ccComets span:nth-child(1) { top: 16%; left: -24%; animation-delay: 0s; }
+.ccComets span:nth-child(2) { top: 46%; left: -30%; animation-delay: 4.2s; }
+.ccComets span:nth-child(3) { top: 72%; left: -26%; animation-delay: 8.1s; }
+
+.app > * {
+  position: relative;
+  z-index: 1;
+}
+
+.storageCleanerTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0;
+  padding: 9px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(147, 166, 205, .28);
+  background: linear-gradient(180deg, rgba(22, 28, 40, .94), rgba(14, 18, 27, .92));
+  color: #eef2f8;
+  box-shadow:
+    0 10px 28px rgba(0,0,0,.24),
+    inset 0 1px 0 rgba(255,255,255,.06);
+  backdrop-filter: blur(12px);
+}
+
+.storageCleanerTrigger:hover {
+  background: linear-gradient(180deg, rgba(28, 35, 50, .96), rgba(18, 22, 33, .94));
+  transform: translateY(-1px);
+}
+
+.storageCleanerTriggerIcon {
+  width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(187,211,255,.35), rgba(0,0,0,0));
+  box-shadow: 0 0 14px rgba(135, 171, 255, .18);
+  font-size: 11px;
+}
+
+.storageCleanerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(3, 5, 10, .70);
+  backdrop-filter: blur(14px);
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+
+.storageCleanerModal {
+  width: min(960px, calc(100vw - 28px));
+  max-height: calc(100vh - 42px);
+  overflow: auto;
+  border-radius: 28px;
+  border: 1px solid rgba(117, 136, 170, .22);
+  background:
+    linear-gradient(180deg, rgba(18, 23, 34, .96), rgba(9, 13, 21, .94));
+  box-shadow:
+    0 28px 80px rgba(0,0,0,.42),
+    inset 0 1px 0 rgba(255,255,255,.05);
+  padding: 22px;
+}
+
+.storageCleanerHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.storageCleanerEyebrow {
+  margin-bottom: 8px;
+  font-size: 11px;
+  letter-spacing: .16em;
+  color: #8fa0bc;
+}
+
+.storageCleanerHeader h3 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: -.04em;
+}
+
+.storageCleanerHeader p {
+  margin: 10px 0 0;
+  color: #93a0b0;
+  line-height: 1.5;
+  max-width: 560px;
+}
+
+.storageCleanerClose {
+  margin-top: 0;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 12px;
+}
+
+.storageCleanerGrid {
+  display: grid;
+  grid-template-columns: 1.1fr 1.1fr 1fr;
+  gap: 14px;
+}
+
+.storageCleanerCard {
+  padding: 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(118, 136, 168, .16);
+  background:
+    linear-gradient(180deg, rgba(20, 27, 41, .72), rgba(12, 18, 28, .62));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.storageCleanerCardTitle {
+  margin-bottom: 12px;
+  font-size: 12px;
+  letter-spacing: .14em;
+  color: #95a6c2;
+  text-transform: uppercase;
+}
+
+.storageCleanerPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.storageCleanerPill {
+  margin-top: 0;
+  padding: 8px 12px;
+  border-radius: 999px;
+}
+
+.storageCleanerPill.selected {
+  border-color: rgba(144, 181, 255, .36);
+  background: linear-gradient(180deg, rgba(62, 86, 132, .38), rgba(24, 35, 55, .42));
+  box-shadow: 0 0 18px rgba(125, 163, 255, .12);
+}
+
+.storageCleanerHint {
+  margin-top: 14px;
+  color: #8090a3;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.storageCleanerFolders {
+  display: grid;
+  gap: 8px;
+}
+
+.storageCleanerFolderRow {
+  padding: 11px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(120, 136, 163, .16);
+  background: rgba(255,255,255,.018);
+  color: #dbe2ec;
+}
+
+.storageCleanerPreviewStats {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.storageCleanerPreviewStats > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(120, 136, 163, .14);
+  background: rgba(255,255,255,.018);
+}
+
+.storageCleanerPreviewStats span {
+  color: #92a2b7;
+}
+
+.storageCleanerActions {
+  display: grid;
+  gap: 8px;
+}
+
+.storageCleanerActions button {
+  margin-top: 0;
+}
+
+.storageCleanerPrimary {
+  border-color: rgba(141, 170, 255, .36);
+  background: linear-gradient(180deg, rgba(60, 82, 125, .55), rgba(24, 34, 53, .72));
+}
+
+.storageCleanerGhost {
+  border-color: rgba(122, 140, 172, .24);
+  background: linear-gradient(180deg, rgba(28, 33, 46, .86), rgba(15, 19, 28, .86));
+}
+
+.storageCleanerDanger {
+  border-color: rgba(182, 88, 100, .32);
+  background: linear-gradient(180deg, rgba(69, 28, 34, .76), rgba(36, 16, 20, .90));
+  color: #ffbcc4;
+}
+
+@keyframes ccNebulaDriftA {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(3%, -2%, 0) scale(1.06); }
+}
+
+@keyframes ccNebulaDriftB {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(-2%, 2%, 0) scale(1.08); }
+}
+
+@keyframes ccStarsDriftFar {
+  0% { transform: translate3d(0,0,0); }
+  100% { transform: translate3d(-26px, 22px, 0); }
+}
+
+@keyframes ccStarsDriftMid {
+  0% { transform: translate3d(0,0,0); }
+  100% { transform: translate3d(-42px, 34px, 0); }
+}
+
+@keyframes ccStarsDriftNear {
+  0% { transform: translate3d(0,0,0); }
+  100% { transform: translate3d(-66px, 48px, 0); }
+}
+
+@keyframes ccLinePulse {
+  0%, 100% { opacity: .14; transform-origin: center center; }
+  50% { opacity: .62; }
+}
+
+@keyframes ccBurstPulse {
+  0%, 100% { opacity: 0; transform: scale(.42); }
+  18% { opacity: .95; transform: scale(1.35); }
+  32% { opacity: .18; transform: scale(2.35); }
+}
+
+@keyframes ccOrbFloat {
+  0%, 100% { transform: translate3d(0,0,0) scale(1); }
+  50% { transform: translate3d(18px,-14px,0) scale(1.06); }
+}
+
+@keyframes ccCometFly {
+  0% { opacity: 0; transform: translate3d(0,0,0) rotate(-28deg) scale(.86); }
+  10% { opacity: .88; }
+  55% { opacity: .92; }
+  100% { opacity: 0; transform: translate3d(128vw, 34vh, 0) rotate(-28deg) scale(1.06); }
+}
+
+@media (max-width: 960px) {
+  .storageCleanerGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .storageCleanerTrigger span:last-child {
+    display: none;
+  }
+
+  .storageCleanerModal {
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .storageCleanerHeader h3 {
+    font-size: 23px;
+  }
+}
+
+
+/* GP_STORAGE_UI_V2 */
+.app > .ccCosmos {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.app > .storageCleanerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.storageCleanerModal {
+  width: min(1120px, calc(100vw - 32px));
+}
+
+.storageCleanerGrid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.35fr);
+}
+
+.storageCleanerCard {
+  min-width: 0;
+}
+
+.storageCleanerPathLabel {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  font-size: 12px;
+  color: #aabbd2;
+}
+
+.storageCleanerPathInput {
+  width: 100%;
+  min-width: 0;
+  font-family: Consolas, "Cascadia Code", monospace;
+  font-size: 12px;
+  border-color: rgba(150, 175, 215, .28);
+  background: rgba(7, 12, 22, .68);
+}
+
+.storageCleanerFullButton {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.storageCleanerCurrentPath {
+  font-size: 11px;
+  font-family: Consolas, monospace;
+  color: #bccbe4;
+  overflow-wrap: anywhere;
+  padding: 10px 12px;
+  border: 1px solid rgba(135, 155, 190, .16);
+  border-radius: 12px;
+  background: rgba(7, 11, 19, .45);
+}
+
+.storageCleanerDirectoryList,
+.storageCleanerCandidateList {
+  display: grid;
+  gap: 7px;
+  max-height: 310px;
+  overflow-y: auto;
+  padding: 5px 2px;
+  margin-top: 12px;
+}
+
+.storageCleanerDirectoryEntry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 9px;
+  text-align: left;
+  font-size: 11px;
+  background: rgba(23, 32, 49, .62);
+  border: 1px solid rgba(125, 145, 181, .15);
+}
+
+.storageCleanerDirectoryEntry:disabled {
+  opacity: .68;
+  cursor: default;
+}
+
+.storageCleanerEntryName {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.storageCleanerEntryName > span {
+  font-size: 9px;
+  color: #8da9d6;
+  flex-shrink: 0;
+}
+
+.storageCleanerDirectoryEntry small {
+  color: #99aac4;
+  white-space: nowrap;
+}
+
+.storageCleanerCandidate {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  padding: 10px;
+  border: 1px solid rgba(140, 153, 182, .16);
+  background: rgba(13, 19, 31, .72);
+  border-radius: 12px;
+}
+
+.storageCleanerCandidate strong {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.storageCleanerCandidate span {
+  font-size: 11px;
+  color: #c6b6de;
+}
+
+.storageCleanerCandidate small {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  color: #90a0b5;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+
+.storageCleanerError,
+.storageCleanerWarning,
+.storageCleanerBusy {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  border-radius: 11px;
+}
+
+.storageCleanerError {
+  color: #ffb6b6;
+  background: rgba(110, 30, 45, .23);
+  border: 1px solid rgba(224, 95, 115, .3);
+}
+
+.storageCleanerWarning {
+  color: #f3d5a0;
+  background: rgba(126, 87, 29, .16);
+  border: 1px solid rgba(193, 137, 52, .25);
+}
+
+.storageCleanerBusy {
+  color: #b6d8ff;
+  background: rgba(40, 80, 130, .17);
+  border: 1px solid rgba(105, 151, 220, .25);
+}
+
+.storageCleanerClose {
+  flex-shrink: 0;
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.storageCleanerDanger:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .storageCleanerGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .storageCleanerGrid > section:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 650px) {
+  .storageCleanerGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .storageCleanerGrid > section:last-child {
+    grid-column: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ccNebula, .ccStarfield, .ccOrbitLines span,
+  .ccGlowBursts span, .ccEnergyOrbs span, .ccComets span {
+    animation: none !important;
+  }
+}
+
+
+/* GP_CANVAS_COLLIDER_FLOW_V1
+   Physical Canvas background; legacy CSS cosmos nodes are not mounted. */
+.app.ccAppRoot > canvas.ccCanvasField {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  z-index: 0;
+  pointer-events: none;
+  background: #080b16;
+}
+
+/* GP_CHANNEL_NEON_STATES_V1 */
+
+/* State styling applies to focused and compact cards. */
+.ccChannelCard .ccNeonStrip {
+  height: 4px;
+  opacity: 1;
+  pointer-events: none;
+  transform-origin: center;
+  will-change: opacity, background-position, filter;
+}
+
+/* OFFLINE: calm white indicator. */
+.ccChannelCard .ccNeonStrip.ccStripOffline,
+.ccChannelCard.ccFocused .ccNeonStrip.ccStripOffline {
+  background: linear-gradient(90deg,
+    #8b919e, #f7f9ff, #c4cbd5, #9299a6);
+  background-size: 100% 100%;
+  box-shadow: 0 0 7px rgba(238,244,255,.30);
+  animation: none;
+}
+
+/* READY: soft green energy traveling along the strip. */
+.ccChannelCard .ccNeonStrip.ccStripReady,
+.ccChannelCard.ccFocused .ccNeonStrip.ccStripReady {
+  background: linear-gradient(90deg,
+    #08774f, #18dc91, #9affd0, #13bb7f, #08774f);
+  background-size: 250% 100%;
+  box-shadow:
+    0 0 11px rgba(20,255,158,.70),
+    0 0 25px rgba(20,255,158,.28);
+  animation:
+    gpNeonTravel 4.8s linear infinite,
+    gpGreenBreath 3.2s ease-in-out infinite;
+}
+
+/* PAUSE / STOP: erratic high-voltage orange flicker. */
+.ccChannelCard .ccNeonStrip.ccStripPaused,
+.ccChannelCard.ccFocused .ccNeonStrip.ccStripPaused {
+  background: linear-gradient(90deg,
+    #92390f, #ff8a2a, #ffe1a5, #ff681b, #a44211);
+  background-size: 220% 100%;
+  box-shadow:
+    0 0 12px rgba(255,130,35,.85),
+    0 0 29px rgba(255,100,20,.46);
+  animation:
+    gpElectricFlicker 2.1s steps(1,end) infinite,
+    gpNeonTravel 3.7s linear infinite;
+}
+
+/* EXECUTING: vivid RGB spectrum in motion. */
+.ccChannelCard .ccNeonStrip.ccStripExecuting,
+.ccChannelCard.ccFocused .ccNeonStrip.ccStripExecuting {
+  height: 5px;
+  background: linear-gradient(90deg,
+    #ff3d62, #ffc547, #5cff9e,
+    #3fcaff, #a463ff, #ff3d62);
+  background-size: 300% 100%;
+  box-shadow:
+    0 0 14px rgba(139,112,255,.93),
+    0 0 32px rgba(103,181,255,.48);
+  animation:
+    gpNeonTravel 1.8s linear infinite,
+    gpRGBPulse 1.3s ease-in-out infinite;
+}
+
+/* HIGH: red, visibly energized but not moving the card. */
+.ccChannelCard .ccNeonStrip.ccStripHigh,
+.ccChannelCard.ccFocused .ccNeonStrip.ccStripHigh {
+  height: 5px;
+  background: linear-gradient(90deg,
+    #94091e, #ff304c, #ffadb5, #ef1838, #94091e);
+  background-size: 220% 100%;
+  box-shadow:
+    0 0 15px rgba(255,41,71,.95),
+    0 0 38px rgba(255,33,61,.54);
+  animation:
+    gpNeonTravel 1.4s linear infinite,
+    gpHighPulse 1s ease-in-out infinite;
+}
+
+/* Glowing traveling spot, inherited from state-specific color. */
+.ccChannelCard .ccNeonStrip.ccStripReady::after,
+.ccChannelCard .ccNeonStrip.ccStripPaused::after,
+.ccChannelCard .ccNeonStrip.ccStripExecuting::after,
+.ccChannelCard .ccNeonStrip.ccStripHigh::after {
+  content: "";
+  position: absolute;
+  top: -15px;
+  left: 0;
+  width: 55px;
+  height: 35px;
+  border-radius: 50%;
+  filter: blur(11px);
+  pointer-events: none;
+  animation: ccOrbTravelV2 3.8s ease-in-out infinite alternate;
+}
+
+.ccChannelCard .ccNeonStrip.ccStripReady::after {
+  background: radial-gradient(ellipse,
+    rgba(205,255,234,.93),
+    rgba(33,255,150,.60) 38%, transparent 77%);
+}
+
+.ccChannelCard .ccNeonStrip.ccStripPaused::after {
+  background: radial-gradient(ellipse,
+    rgba(255,229,171,.98),
+    rgba(255,113,25,.82) 38%, transparent 77%);
+  animation-duration: 2.2s;
+}
+
+.ccChannelCard .ccNeonStrip.ccStripExecuting::after {
+  background: radial-gradient(ellipse,
+    rgba(255,255,255,.98),
+    rgba(131,155,255,.87) 36%, transparent 77%);
+  animation-duration: 1.7s;
+}
+
+.ccChannelCard .ccNeonStrip.ccStripHigh::after {
+  background: radial-gradient(ellipse,
+    rgba(255,235,235,.98),
+    rgba(255,30,62,.90) 38%, transparent 77%);
+  animation-duration: 1.2s;
+}
+
+.ccChannelCard .ccNeonStrip.ccStripOffline::after {
+  display: none;
+}
+
+@keyframes gpNeonTravel {
+  from { background-position: 0% 0; }
+  to   { background-position: 300% 0; }
+}
+
+@keyframes gpGreenBreath {
+  0%,100% { opacity: .77; filter: brightness(.92); }
+  50% { opacity: 1; filter: brightness(1.15); }
+}
+
+@keyframes gpElectricFlicker {
+  0%,7%,12%,29%,34%,51%,57%,77%,82%,100% {
+    opacity: 1;
+    filter: brightness(1.22);
+  }
+  8%,10%,30%,32%,52%,55%,79% {
+    opacity: .20;
+    filter: brightness(.55);
+  }
+  11%,33%,56%,80% {
+    opacity: .65;
+    filter: brightness(1.7);
+  }
+}
+
+@keyframes gpRGBPulse {
+  0%,100% { opacity: .87; filter: brightness(1); }
+  50% { opacity: 1; filter: brightness(1.4); }
+}
+
+@keyframes gpHighPulse {
+  0%,100% { opacity: .85; filter: brightness(1); }
+  50% { opacity: 1; filter: brightness(1.8); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ccChannelCard .ccNeonStrip.ccStripReady,
+  .ccChannelCard .ccNeonStrip.ccStripPaused,
+  .ccChannelCard .ccNeonStrip.ccStripExecuting,
+  .ccChannelCard .ccNeonStrip.ccStripHigh,
+  .ccChannelCard .ccNeonStrip::after {
+    animation: none;
+  }
+}
+
+/* GP_COMMAND_VIEWER_V1 */
+
+.ccCommandPreview[role="button"] {
+  cursor: zoom-in;
+}
+
+.ccCommandPreview[role="button"]:focus-visible {
+  outline: 2px solid #91bcf9;
+  outline-offset: 3px;
+}
+
+.ccCommandToolRow {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.ccCommandToolRow button {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 9px 7px;
+  font-size: 10px;
+}
+
+.ccCopyNotice {
+  margin: 4px 0 8px;
+  color: #a8eac8;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.app.ccAppRoot > .gpCommandBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(2, 5, 13, .83);
+  backdrop-filter: blur(10px);
+}
+
+.gpCommandDialog {
+  width: min(920px, 100%);
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 23px;
+  border: 1px solid rgba(184, 149, 211, .55);
+  border-radius: 19px;
+  background: #1a1e29;
+  box-shadow: 0 20px 75px rgba(0,0,0,.65);
+}
+
+.gpCommandDialogHeader,
+.gpCommandDialogToolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.gpCommandDialogHeader h3 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.gpCommandDialogHeader p {
+  margin: 6px 0 0;
+  color: #9caabe;
+  font-size: 12px;
+}
+
+.gpCommandDialog button {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 11px;
+}
+
+.gpCommandDialogToolbar strong {
+  font-size: 11px;
+  letter-spacing: .09em;
+  color: #ccd3e0;
+}
+
+.gpCommandDialog textarea,
+.gpCommandDialog pre {
+  width: 100%;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #363f51;
+  border-radius: 12px;
+  background: #0d121c;
+  color: #e4eaf5;
+  font: 12px/1.55 Consolas, "Cascadia Mono", monospace;
+  white-space: pre;
+  overflow: auto;
+  user-select: text;
+}
+
+.gpCommandDialog textarea {
+  height: min(32vh, 260px);
+  min-height: 120px;
+  resize: vertical;
+}
+
+.gpCommandDialog pre {
+  flex: 1;
+  min-height: 110px;
+  max-height: 31vh;
+}
+
+.gpCommandDialogNotice {
+  min-height: 17px;
+  font-size: 11px;
+  color: #a8eac8;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 650px) {
+  .gpCommandDialog {
+    padding: 14px;
+  }
+  .gpCommandDialogHeader h3 {
+    font-size: 17px;
+  }
+}
+
+/* GP_CARD_COMMAND_SPACE_V1 */
+
+/* Move only the focused card slightly upward. */
+@media (min-width: 761px) {
+  .ccCardRow .ccChannelCard.ccFocused {
+    top: -14px;
+  }
+}
+
+/* Give the focused card a larger command-reading area. */
+.ccChannelCard.ccFocused .ccCommandPreview {
+  min-height: 170px;
+  margin: 13px 0 11px;
+  padding: 14px 15px;
+  gap: 10px;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.ccChannelCard.ccFocused .ccCommandPreview code {
+  display: block;
+  min-height: 110px;
+  max-height: 175px;
+  overflow-x: auto;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  scrollbar-width: thin;
+}
+
+/* Preserve the compact cards' three-line preview. */
+.ccChannelCard.ccCompact .ccCommandPreview code {
+  min-height: 0;
+}
+
+/* Avoid vertical displacement on narrow windows. */
+@media (max-width: 760px) {
+  .ccCardRow .ccChannelCard.ccFocused {
+    top: 0;
+  }
+
+  .ccChannelCard.ccFocused .ccCommandPreview {
+    min-height: 135px;
+  }
+
+  .ccChannelCard.ccFocused .ccCommandPreview code {
+    min-height: 75px;
+    max-height: 135px;
+  }
+}
+
+/* GP_MANUAL_REPLAY_UI_V1 */
+
+.ccReplayToolRow {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.ccReplayToolRow button {
+  margin: 0;
+  min-width: 0;
+  padding: 10px 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ccReplayHigh {
+  border-color: rgba(255,91,107,.58) !important;
+  background: linear-gradient(110deg,#51232e,#8c3442) !important;
+  color: #ffe1e4 !important;
+}
+
+.ccReplayHigh:not(:disabled):hover {
+  background: linear-gradient(110deg,#78303c,#af4050) !important;
+}
+
+.ccReplayToolRow button:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+}
+
+.gpReplayDialog {
+  width: min(850px,100%);
+}
+
+.gpReplayWarning {
+  padding: 14px 16px;
+  border: 1px solid rgba(255,156,82,.40);
+  border-radius: 12px;
+  background: rgba(107,57,28,.25);
+  color: #ffd9bc;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.gpReplayDialog pre {
+  min-height: 135px;
+  max-height: 39vh;
+  overflow: auto;
+  white-space: pre;
+}
+
+.gpReplayActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.gpReplayActions button {
+  min-width: 135px;
+}
+
+@media (max-width: 650px) {
+  .gpReplayActions button {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .ccReplayToolRow button {
+    font-size: 10px;
+  }
+}
+
+/* GP_ORGANIC_NEON_CONTOUR_V2 */
+
+/* The neon is now a rounded top-border contour, not a traveling orb. */
+.ccChannelCard .ccNeonStrip {
+  top: -1px;
+  left: -1px;
+  right: -1px;
+  width: auto;
+  height: 25px;
+  border-radius: 21px 21px 0 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  animation: none !important;
+  filter:
+    drop-shadow(0 0 5px var(--gp-neon-glow))
+    drop-shadow(0 0 10px var(--gp-neon-glow));
+  pointer-events: none;
+  z-index: 2;
+
+  --gp-neon-glow: rgba(234,241,255,.25);
+  --gp-neon-line: linear-gradient(
+    90deg,#b8c2d0,#f7faff,#c3cedb,#b8c2d0
+  );
+}
+
+.ccChannelCard .ccNeonStrip.ccStripReady {
+  --gp-neon-glow: rgba(32,255,163,.45);
+  --gp-neon-line: linear-gradient(
+    90deg,#087d54,#25db93,#9affcf,#19e39a,#087d54
+  );
+}
+
+.ccChannelCard .ccNeonStrip.ccStripPaused {
+  --gp-neon-glow: rgba(255,131,40,.50);
+  --gp-neon-line: linear-gradient(
+    90deg,#a64c1d,#ff8d38,#ffd59c,#ff812b,#b44e1c
+  );
+}
+
+.ccChannelCard .ccNeonStrip.ccStripExecuting {
+  --gp-neon-glow: rgba(156,115,255,.55);
+  --gp-neon-line: linear-gradient(
+    90deg,#fa427c,#ffcc59,#4affb9,#45caff,#b46dff,#fa427c
+  );
+}
+
+.ccChannelCard .ccNeonStrip.ccStripHigh {
+  --gp-neon-glow: rgba(255,47,76,.65);
+  --gp-neon-line: linear-gradient(
+    90deg,#a90e2d,#ff405d,#ffabb3,#ff254b,#a90e2d
+  );
+}
+
+/* A masked top-and-corners border. Border-bottom is intentionally zero. */
+.ccChannelCard .ccNeonStrip::before,
+.ccChannelCard .ccNeonStrip::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: auto;
+  height: auto;
+  border: 3px solid transparent;
+  border-bottom-width: 0;
+  border-radius: 21px 21px 0 0;
+  background: var(--gp-neon-line) border-box;
+  background-size: 230% 100%;
+  box-shadow: none;
+  pointer-events: none;
+
+  -webkit-mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0) border-box;
+  -webkit-mask-composite: xor;
+
+  mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0) border-box;
+  mask-composite: exclude;
+}
+
+/* Thin energized contour. */
+.ccChannelCard .ccNeonStrip::before {
+  opacity: .94;
+  filter: none;
+  animation: gpOrganicNeonFlow 7s ease-in-out infinite alternate;
+}
+
+/* Broad soft luminance without an independent moving ball. */
+.ccChannelCard .ccNeonStrip::after {
+  opacity: .42;
+  filter: blur(5px);
+  animation:
+    gpOrganicNeonFlow 9s ease-in-out infinite alternate-reverse,
+    gpOrganicNeonGlow 4.4s ease-in-out infinite;
+}
+
+/* Override the old orb styles for every live mode. */
+.ccChannelCard .ccNeonStrip.ccStripReady::after,
+.ccChannelCard .ccNeonStrip.ccStripPaused::after,
+.ccChannelCard .ccNeonStrip.ccStripExecuting::after,
+.ccChannelCard .ccNeonStrip.ccStripHigh::after {
+  top: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  border-radius: 21px 21px 0 0;
+  background: var(--gp-neon-line) border-box;
+  background-size: 230% 100%;
+  opacity: .42;
+  filter: blur(5px);
+  animation:
+    gpOrganicNeonFlow 9s ease-in-out infinite alternate-reverse,
+    gpOrganicNeonGlow 4.4s ease-in-out infinite;
+}
+
+.ccChannelCard .ccNeonStrip.ccStripOffline::before {
+  animation: none;
+}
+
+.ccChannelCard .ccNeonStrip.ccStripOffline::after {
+  display: none;
+}
+
+/* Ready: subtle variation in line intensity. */
+.ccChannelCard .ccNeonStrip.ccStripReady::before {
+  animation:
+    gpOrganicNeonFlow 6.8s ease-in-out infinite alternate,
+    gpOrganicNeonGlow 4.6s ease-in-out infinite;
+}
+
+/* Paused: electrical shimmer, never fully dark or strobing. */
+.ccChannelCard .ccNeonStrip.ccStripPaused::before {
+  animation:
+    gpOrganicNeonFlow 5.5s ease-in-out infinite alternate,
+    gpOrganicElectric 2.8s ease-in-out infinite;
+}
+
+.ccChannelCard .ccNeonStrip.ccStripPaused::after {
+  animation:
+    gpOrganicNeonFlow 7.5s ease-in-out infinite alternate-reverse,
+    gpOrganicElectricGlow 3.3s ease-in-out infinite;
+}
+
+.ccChannelCard .ccNeonStrip.ccStripExecuting::before {
+  animation: gpOrganicNeonFlow 2.4s linear infinite;
+}
+
+.ccChannelCard .ccNeonStrip.ccStripHigh::before {
+  animation:
+    gpOrganicNeonFlow 2.5s ease-in-out infinite alternate,
+    gpOrganicHighPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes gpOrganicNeonFlow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 95% 50%; }
+  100% { background-position: 230% 50%; }
+}
+
+@keyframes gpOrganicNeonGlow {
+  0%,100% { opacity: .29; }
+  50%     { opacity: .53; }
+}
+
+@keyframes gpOrganicElectric {
+  0%,100% { opacity: .94; filter: brightness(1); }
+  14%     { opacity: .88; filter: brightness(.96); }
+  26%     { opacity: 1; filter: brightness(1.16); }
+  41%     { opacity: .91; filter: brightness(1.03); }
+  67%     { opacity: 1; filter: brightness(1.23); }
+  81%     { opacity: .90; filter: brightness(.97); }
+}
+
+@keyframes gpOrganicElectricGlow {
+  0%,100% { opacity: .32; filter: blur(5px); }
+  36%     { opacity: .48; filter: blur(6px); }
+  61%     { opacity: .39; filter: blur(4px); }
+  79%     { opacity: .57; filter: blur(7px); }
+}
+
+@keyframes gpOrganicHighPulse {
+  0%,100% { opacity: .85; filter: brightness(1); }
+  50%     { opacity: 1; filter: brightness(1.45); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ccChannelCard .ccNeonStrip,
+  .ccChannelCard .ccNeonStrip::before,
+  .ccChannelCard .ccNeonStrip::after {
+    animation: none !important;
+  }
+}
+/* GP_I18N_STAGE1 */
+
+.headerControls .gpLanguageToggle {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #232b39;
+  border: 1px solid rgba(196,207,234,.34);
+  cursor: pointer;
+}
+
+.headerControls .gpLanguageToggle:hover {
+  border-color: #a8bbeb;
+  box-shadow: 0 0 14px rgba(129,160,236,.28);
+}
+
+.gpLanguageFlag {
+  position: relative;
+  display: block;
+  width: 23px;
+  height: 16px;
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.22);
+}
+
+.gpFlagRu {
+  background: linear-gradient(to bottom,
+    #fff 0% 33.333%,
+    #1755c5 33.333% 66.666%,
+    #df263a 66.666% 100%);
+}
+
+.gpFlagUs {
+  background: repeating-linear-gradient(
+    to bottom,
+    #b22234 0px 1.24px,
+    #fff 1.24px 2.48px
+  );
+}
+
+.gpFlagUs::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 43%;
+  height: 54%;
+  background: #3c3b6e;
+}
+
+.ccModeControls .gpModeGo {
+  color: #c5ffe1;
+  border-color: rgba(48,205,121,.48);
+  background: linear-gradient(130deg,#174d37,#246b4a);
+}
+
+.ccModeControls .gpModeGo:hover {
+  background: linear-gradient(130deg,#20684a,#2e855e);
+}
+
+.ccModeControls .gpModePause,
+.ccPrimaryActions .gpModePause {
+  color: #ffdfc1;
+  border-color: rgba(248,150,64,.56);
+  background: linear-gradient(130deg,#66391f,#894926);
+}
+
+.ccModeControls .gpModePause:hover,
+.ccPrimaryActions .gpModePause:hover {
+  background: linear-gradient(130deg,#804625,#a45b2b);
+}
+
+.ccReplayToolRow button,
+.ccModeControls button,
+.ccPrimaryActions button {
+  white-space: normal;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  height: auto;
+  min-height: 38px;
+}
+
+@media (max-width:760px) {
+  .headerControls {
+    flex-wrap: wrap;
+  }
+}
+
+
+/* GP_COMPACT_CARD_CSS_V1 */
+
+/* Allow the window to scroll naturally from the top. */
+html {
+  height: auto;
+  min-height: 100%;
+  overflow-y: auto;
+  scroll-behavior: auto;
+}
+
+body {
+  height: auto;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: auto;
+}
+
+#root,
+.app.ccAppRoot {
+  height: auto !important;
+  min-height: 100vh;
+  overflow: visible !important;
+}
+
+.ccCardRow {
+  min-height: 0 !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+}
+
+.ccCardRow .ccChannelCard.ccFocused {
+  top: 0 !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  padding: 14px 15px 15px !important;
+  align-self: start !important;
+}
+
+.ccChannelCard.ccCompact {
+  min-height: 285px !important;
+  max-height: 350px !important;
+}
+
+.ccChannelCard.ccFocused .ccCommandPreview {
+  min-height: 88px !important;
+  padding: 11px 12px !important;
+  margin: 7px 0 9px !important;
+}
+
+.ccChannelCard.ccFocused .ccCommandPreview code {
+  min-height: 0 !important;
+  max-height: 66px !important;
+  font-size: 10px !important;
+  line-height: 1.4 !important;
+}
+
+.ccCardRow .ccCardTitle {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.ccExpandCommandButton {
+  display: block;
+  width: 100%;
+  margin: 7px 0 9px;
+  padding: 9px 12px;
+  border: 1px solid rgba(92, 146, 204, .42);
+  border-radius: 11px;
+  background: linear-gradient(
+    180deg, rgba(35, 49, 70, .95),
+    rgba(24, 34, 49, .95)
+  );
+  color: #e4efff;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.ccExpandCommandButton:hover {
+  border-color: rgba(123, 184, 245, .72);
+  background: #263b56;
+}
+
+.ccCommandPreviewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.ccCommandCopyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 29px;
+  width: 29px;
+  height: 29px;
+  padding: 5px;
+  border: 1px solid rgba(120, 153, 187, .34);
+  border-radius: 8px;
+  background: rgba(21, 32, 48, .88);
+  color: #d9e8fa;
+  cursor: pointer;
+}
+
+.ccCommandCopyIcon:hover:not(:disabled) {
+  background: #304560;
+  color: #ffffff;
+}
+
+.ccCommandCopyIcon:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+.ccBridgeToggleRow {
+  width: 100%;
+  margin: 7px 0 9px;
+}
+
+.ccBridgeToggleButton {
+  display: block;
+  width: 100%;
+  min-height: 38px;
+  padding: 9px 12px;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ccBridgeToggleButton.bridgeStart {
+  color: #ddffeb;
+  border: 1px solid rgba(68, 202, 132, .51);
+  background: linear-gradient(110deg, #20593f, #23744c);
+}
+
+.ccBridgeToggleButton.bridgeStop {
+  color: #ffe9d4;
+  border: 1px solid rgba(232, 144, 63, .57);
+  background: linear-gradient(110deg, #653b25, #97572c);
+}
+
+.ccBridgeToggleButton:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+}
+
+.ccExecutionStatus {
+  margin: 8px 0 !important;
+  font-size: 11px !important;
+}
+
+.ccModeControls.gpCompactModes {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px !important;
+  margin: 7px 0 !important;
+}
+
+.ccModeControls.gpCompactModes button {
+  min-width: 0 !important;
+  min-height: 35px;
+  padding: 7px 5px !important;
+  font-size: 10px !important;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.ccReplayToolRow {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px !important;
+  margin: 7px 0 !important;
+}
+
+.ccReplayToolRow button {
+  min-width: 0;
+  min-height: 37px;
+  padding: 8px 6px !important;
+  font-size: 10px !important;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.ccStopExecutionFull {
+  display: block;
+  width: 100%;
+  min-height: 37px;
+  margin: 8px 0 10px;
+  padding: 8px 12px;
+  font-size: 11px;
+}
+
+.ccStorageTiles {
+  margin-top: 8px !important;
+}
+
+@media (min-width: 850px) {
+  .ccCardRow {
+    display: grid !important;
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(300px, 1.5fr)
+      minmax(0, 1fr) !important;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 849px) {
+  .ccCardRow {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .ccCardRow .ccChannelCard {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .ccModeControls.gpCompactModes {
+    gap: 4px !important;
+  }
+
+  .ccModeControls.gpCompactModes button {
+    font-size: 9px !important;
+  }
+}
+
+/* GP_SIDECARD_CENTER_BLUR_V2_START */
+@media (min-width: 850px) {
+  .ccCardRow {
+    align-items: center !important;
+  }
+
+  .ccCardRow .ccChannelCard.ccFocused {
+    align-self: start !important;
+  }
+
+  .ccCardRow .ccChannelCard.ccCompact {
+    align-self: center !important;
+  }
+
+  .ccCardRow .ccChannelCard.ccCompact > *:not(.ccNeonStrip) {
+    filter: blur(0.8px);
+  }
+}
+/* GP_SIDECARD_CENTER_BLUR_V2_END */
+
+/* GP_NEON_STICKY_V1 */
+
+/* Pin only the real main application header. */
+.app.ccAppRoot > header {
+  position: sticky !important;
+  top: 0;
+  z-index: 90 !important;
+
+  background: linear-gradient(
+    180deg,
+    rgba(8, 11, 22, .98),
+    rgba(8, 11, 22, .93)
+  );
+
+  backdrop-filter: blur(16px) saturate(1.12);
+  -webkit-backdrop-filter: blur(16px) saturate(1.12);
+
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .28);
+}
+
+/* Strengthen the existing organic neon contour. */
+.ccChannelCard .ccNeonStrip {
+  filter:
+    drop-shadow(0 0 7px var(--gp-neon-glow))
+    drop-shadow(0 0 14px var(--gp-neon-glow))
+    drop-shadow(0 0 23px var(--gp-neon-glow)) !important;
+}
+
+/* State-specific colors remain distinct. */
+.ccChannelCard .ccNeonStrip.ccStripOffline {
+  --gp-neon-glow: rgba(225, 236, 255, .36);
+}
+
+.ccChannelCard .ccNeonStrip.ccStripReady {
+  --gp-neon-glow: rgba(35, 255, 156, .75);
+}
+
+.ccChannelCard .ccNeonStrip.ccStripPaused {
+  --gp-neon-glow: rgba(255, 151, 38, .90);
+}
+
+.ccChannelCard .ccNeonStrip.ccStripExecuting {
+  --gp-neon-glow: rgba(149, 117, 255, .86);
+}
+
+.ccChannelCard .ccNeonStrip.ccStripHigh {
+  --gp-neon-glow: rgba(255, 47, 73, .95);
+}
+
+/* More obvious breathing glow for all active colors. */
+@keyframes gpOrganicNeonGlow {
+  0%, 100% {
+    opacity: .43;
+  }
+  50% {
+    opacity: .91;
+  }
+}
+
+/* Orange pause state: expressive but not strobing. */
+@keyframes gpOrganicElectricGlow {
+  0%, 100% {
+    opacity: .47;
+    filter: blur(6px);
+  }
+  36% {
+    opacity: .86;
+    filter: blur(8px);
+  }
+  61% {
+    opacity: .54;
+    filter: blur(5px);
+  }
+  79% {
+    opacity: .94;
+    filter: blur(9px);
+  }
+}
+
+/* GP_STICKY_SCROLL_FIX_V2 */
+
+/*
+  The document owns vertical scrolling.
+  Body must not create a second scroll container:
+  otherwise position: sticky on the header cannot
+  follow the actual window scroll.
+*/
+
+html:not(.overlay-mode) {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+body:not(.overlay-mode-body) {
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+.app.ccAppRoot > header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+}

@@ -1,23 +1,83 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GPT-POWERSHELL.loop</title>
-  <link rel="stylesheet" href="popup.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GPT Control Center</title>
+  <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <main class="popup">
-    <div class="title">GPT-POWERSHELL.loop</div>
-    <div class="subtitle">Floating status badge</div>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brandIcon">&gt;_</div>
+        <div>
+          <h1>GPT Control Center</h1>
+          <p>Browser Bridge</p>
+        </div>
+      </div>
+      <span class="version">GP3</span>
+    </header>
 
-    <button id="badgeToggle" type="button" class="toggle" aria-pressed="true">
-      <span id="badgeState">Visible</span>
-    </button>
+    <section class="channelSection">
+      <div class="sectionHeading">
+        <span>ACTIVE CHANNEL</span>
+        <span id="connectionIndicator" class="connectionIndicator">
+          Checking
+        </span>
+      </div>
 
-    <p class="hint">
-      The bridge keeps working. This only shows or hides the small GPT↔PS status badge on ChatGPT.
-    </p>
+      <div class="channelGrid" role="group" aria-label="GP channel">
+        <button type="button" data-gp-channel="1">
+          <strong>01</strong>
+          <small>Channel 1</small>
+        </button>
+        <button type="button" data-gp-channel="2">
+          <strong>02</strong>
+          <small>Channel 2</small>
+        </button>
+        <button type="button" data-gp-channel="3">
+          <strong>03</strong>
+          <small>Channel 3</small>
+        </button>
+        <button type="button" data-gp-channel="0" class="offButton">
+          <strong>OFF</strong>
+          <small>Disabled</small>
+        </button>
+      </div>
+
+      <div id="gpChannelStatus" class="channelStatus" role="status">
+        Loading channel state...
+      </div>
+    </section>
+
+    <section class="detailsSection">
+      <div class="detailRow">
+        <span class="detailLabel">Execution routing</span>
+        <span id="routingStatus">Not connected</span>
+      </div>
+      <div class="detailRow">
+        <span class="detailLabel">Local bridge</span>
+        <span id="bridgePort">--</span>
+      </div>
+      <div class="detailRow">
+        <span class="detailLabel">Tab automation</span>
+        <span id="automationState">--</span>
+      </div>
+    </section>
+
+    <details class="preferences">
+      <summary>Appearance &amp; preferences</summary>
+      <button id="badgeToggle" type="button" class="toggle">
+        <span id="badgeState">Loading...</span>
+      </button>
+    </details>
+
+    <footer>
+      <span class="footerDot"></span>
+      <span>Local execution bridge</span>
+      <span class="footerRight">GPT-POWERSHELL.loop</span>
+    </footer>
   </main>
   <script src="popup.js"></script>
 </body>

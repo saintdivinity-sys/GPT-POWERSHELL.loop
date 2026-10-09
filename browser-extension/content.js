@@ -5,6 +5,10 @@
   const MARKER_RENDER_GRACE_MS = 15000;
   const STARTUP_BASELINE_STABLE_MS = 5000;
   const TAB_ENABLED_KEY = "gptps-tab-enabled-v1";
+  const TAB_CHANNEL_KEY = "gptps-tab-channel-v1";
+  const initialChannel = Number(sessionStorage.getItem(TAB_CHANNEL_KEY) || "1");
+  let tabChannel = [1, 2, 3].includes(initialChannel) ? initialChannel : 1;
+  let awaitingChannelResult = false;
   let startupBaselineSignature = "";
   let startupBaselineStableSince = 0;
   let startupBaselineActive = true;
@@ -29,7 +33,7 @@
 
   function setBadge(text, state = "idle") {
     if (!badge || !badgeText) return;
-    badgeText.textContent = text;
+    badgeText.textContent = `CH${tabChannel} ${text}`;
     const colors = {
       idle: ["rgba(12,18,22,.88)", "#bde5bd", "rgba(120,200,120,.55)"],
       sending: ["rgba(28,24,10,.92)", "#ffe69a", "rgba(230,190,80,.65)"],
@@ -62,10 +66,43 @@
     tabToggle.setAttribute("aria-pressed", String(tabEnabled));
   }
 
+  function setTabChannel(value) {
+    const next = Number(value);
+    if (![1, 2, 3].includes(next)) {
+      return { ok: false, error: "Invalid GP channel" };
+    }
+    if (busy || awaitingChannelResult) {
+      return { ok: false, error: "Wait for the current GP command result" };
+    }
+    if (next === tabChannel) {
+      return { ok: true, channel: tabChannel };
+    }
+
+    const previous = tabChannel;
+    tabChannel = next;
+    sessionStorage.setItem(TAB_CHANNEL_KEY, String(next));
+    commandCandidate = null;
+    attentionCandidate = null;
+
+    // Never replay command turns that were visible before switching.
+    baselineCurrentMessages();
+
+    chrome.runtime.sendMessage({
+      type: "GPTPS_TAB_UNBIND_CHANNEL",
+      channel: previous
+    }, () => {
+      void chrome.runtime.lastError;
+    });
+
+    setBadge(`GPT-PS CH${next}`, "ok");
+    wakeBridge();
+    return { ok: true, channel: next };
+  }
+
   function wakeBridge() {
     if (!tabEnabled) return;
 
-    chrome.runtime.sendMessage({ type: "GPTPS_TAB_HELLO" }, (response) => {
+    chrome.runtime.sendMessage({ type: "GPTPS_TAB_HELLO", channel: tabChannel }, (response) => {
       const runtimeError = chrome.runtime.lastError;
       if (!tabEnabled) return;
 
@@ -165,13 +202,15 @@
 
   function extractMarkedPowerShell(article) {
     const full = textOf(article);
-    const markerCandidates = ["GPTPS_EXEC", "GPTPS_HIGH"]
-      .map((marker) => ({ marker, index: full.indexOf(marker) }))
-      .filter((entry) => entry.index >= 0)
-      .sort((a, b) => a.index - b.index);
-
-    if (markerCandidates.length === 0) return null;
-    const { marker, index: markerIndex } = markerCandidates[0];
+    // Explicit three-channel markers; legacy markers remain channel 1.
+    // Reject invalid numeric suffixes rather than executing in channel 1.
+    const markerMatch = full.match(
+      /GPTPS_(?:EXEC|HIGH)(?::[0-9]+)?/
+    );
+    if (!markerMatch) return null;
+    const marker = markerMatch[0];
+    const markerIndex = markerMatch.index;
+    if (!/^GPTPS_(?:EXEC|HIGH)(?::[123])?$/.test(marker)) return null;
 
     // ChatGPT's code-block DOM has changed across UI versions. Prefer the
     // actual <code> child when present, but also support a bare <pre> fallback.
@@ -200,7 +239,7 @@
     }
 
     for (const { node, code } of candidates) {
-      if (/^(powershell|pwsh|shell|bash|cmd|command prompt|GPTPS_EXEC|GPTPS_HIGH)$/i.test(code)) continue;
+      if (/^(powershell|pwsh|shell|bash|cmd|command prompt|GPTPS_EXEC(?::[123])?|GPTPS_HIGH(?::[123])?)$/i.test(code)) continue;
 
       const className = (node.className || "").toLowerCase();
       const parentClass = (node.parentElement?.className || "").toLowerCase();
@@ -245,6 +284,7 @@
 
     chrome.runtime.sendMessage({
       type: "GPTPS_ATTENTION_REQUIRED",
+      channel: tabChannel,
       payload: {
         type: "attention_required",
         assistant_text: text.slice(0, 12000),
@@ -358,6 +398,16 @@
     if (seen.has(key)) return;
 
     const { command, marker } = marked;
+    const markerChannel = Number(marker.split(":")[1] || "1");
+
+    if (markerChannel !== tabChannel) {
+      commandCandidate = null;
+      setBadge(
+        `GPT-PS WRONG CH: expected ${tabChannel}, got ${markerChannel}`,
+        "error"
+      );
+      return;
+    }
     const next = { key, text: full, command, marker };
     const check = noteStableCandidate(commandCandidate, next, 1500);
     commandCandidate = check.value;
@@ -368,13 +418,15 @@
 
     commandCandidate = null;
     busy = true;
-    setBadge(marker === "GPTPS_HIGH" ? "GPT↔PS HIGH…" : "GPT↔PS SEND…", marker === "GPTPS_HIGH" ? "error" : "sending");
+    setBadge(marker.startsWith("GPTPS_HIGH") ? "GPT↔PS HIGH…" : "GPT↔PS SEND…", marker.startsWith("GPTPS_HIGH") ? "error" : "sending");
 
     chrome.runtime.sendMessage({
       type: "GPTPS_ASSISTANT_COMMAND",
+      channel: tabChannel,
       payload: {
         type: "assistant_command",
         marker,
+        channel: tabChannel,
         command,
         assistant_text: full.slice(0, 12000)
       }
@@ -390,6 +442,7 @@
         return;
       }
 
+      awaitingChannelResult = true;
       seen.add(key);
       setBadge("GPT↔PS SENT", "ok");
       busy = false;
@@ -497,13 +550,194 @@
     return false;
   }
 
+  // GP-ATTACH client: files are received from the trusted local bridge.
+  function gpDecodeAttachment(item, expectedChannel) {
+    if (!item || Number(item.channel) !== expectedChannel) {
+      throw new Error("GP attachment channel mismatch");
+    }
+
+    const mime = String(item.mime_type || "");
+    const name = String(item.name || "");
+
+    if (!["image/png", "image/jpeg", "image/webp"].includes(mime)) {
+      throw new Error("Unsupported GP attachment MIME type");
+    }
+
+    if (
+      !/^[^\\/:*?"<>|]+\.(png|jpg|jpeg|webp)$/i.test(name) ||
+      name.length > 180
+    ) {
+      throw new Error("Invalid GP attachment filename");
+    }
+
+    const advertisedSize = Number(item.bytes);
+
+    if (
+      !Number.isSafeInteger(advertisedSize) ||
+      advertisedSize < 1 ||
+      advertisedSize > 12 * 1024 * 1024
+    ) {
+      throw new Error("Invalid GP attachment size");
+    }
+
+    const binary = atob(String(item.base64_data || ""));
+
+    if (binary.length !== advertisedSize) {
+      throw new Error("GP attachment data length mismatch");
+    }
+
+    const bytes = new Uint8Array(binary.length);
+
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+
+    return new File([bytes], name, {
+      type: mime,
+      lastModified: Date.now()
+    });
+  }
+
+  function gpFindImageInput() {
+    const inputs = Array.from(
+      document.querySelectorAll('input[type="file"]')
+    );
+
+    const acceptsImage = (input) => {
+      const accept = String(input.accept || "").toLowerCase();
+      return !accept ||
+        accept.includes("image") ||
+        accept.includes(".png") ||
+        accept.includes(".jpg") ||
+        accept.includes(".webp");
+    };
+
+    return inputs.find(acceptsImage) || null;
+  }
+
+  async function gpEnsureImageInput() {
+    let input = gpFindImageInput();
+
+    if (input) return input;
+
+    // Some ChatGPT layouts create the file input when the add-menu opens.
+    const menuButton = document.querySelector(
+      'button[data-testid="composer-plus-btn"], ' +
+      'button[aria-label="Add photos and files"], ' +
+      'button[aria-label="Attach files"]'
+    );
+
+    if (menuButton) {
+      menuButton.click();
+    }
+
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      input = gpFindImageInput();
+      if (input) return input;
+    }
+
+    throw new Error(
+      "ChatGPT file input unavailable; attachment not submitted"
+    );
+  }
+
+  function gpAttachmentIndicators(root) {
+    return root.querySelectorAll(
+      '[data-testid*="attachment"], ' +
+      '[data-testid*="upload"], ' +
+      '[data-testid*="image-preview"], ' +
+      'img, ' +
+      '[aria-label*=".png"], ' +
+      '[aria-label*=".jpg"], ' +
+      '[aria-label*=".webp"]'
+    ).length;
+  }
+
+  function gpUploadInProgress(root) {
+    return Boolean(root.querySelector(
+      '[role="progressbar"], ' +
+      '[aria-label*="uploading" i], ' +
+      '[data-testid*="upload-progress"], ' +
+      '[data-testid*="uploading"]'
+    ));
+  }
+
+  async function gpInjectAttachments(items, composer, expectedChannel) {
+    if (!Array.isArray(items) || items.length < 1 || items.length > 3) {
+      throw new Error("Invalid GP attachment count");
+    }
+
+    const files = items.map(
+      (item) => gpDecodeAttachment(item, expectedChannel)
+    );
+
+    const input = await gpEnsureImageInput();
+
+    if (files.length > 1 && !input.multiple) {
+      throw new Error(
+        "ChatGPT file input does not support multiple images"
+      );
+    }
+
+    const root =
+      composer.closest("form")?.parentElement ||
+      composer.parentElement?.parentElement ||
+      document.body;
+
+    const before = gpAttachmentIndicators(root);
+    const transfer = new DataTransfer();
+
+    for (const file of files) {
+      transfer.items.add(file);
+    }
+
+    input.files = transfer.files;
+
+    input.dispatchEvent(new Event("input", {
+      bubbles: true
+    }));
+
+    input.dispatchEvent(new Event("change", {
+      bubbles: true
+    }));
+
+    // File selection is not upload confirmation. Wait until the
+    // composer gains attachment UI and progress indications clear.
+    const deadline = Date.now() + 30000;
+    let stableSince = 0;
+
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+
+      const indicated = gpAttachmentIndicators(root) > before;
+      const uploading = gpUploadInProgress(root);
+
+      if (indicated && !uploading) {
+        if (!stableSince) stableSince = Date.now();
+
+        if (Date.now() - stableSince >= 2500) {
+          return;
+        }
+      } else {
+        stableSince = 0;
+      }
+    }
+
+    throw new Error(
+      "GP image upload was not confirmed in the ChatGPT composer"
+    );
+  }
+
   async function submitResult(payload) {
-    setBadge("GPT↔PS RESULT", "result");
+    setBadge("GPT-PS RESULT", "result");
 
     const composer = findComposer();
+
     if (!composer) {
-      console.warn("[GPTPS] composer not found; result was not submitted");
-      setBadge("GPT↔PS RESULT ERR", "error");
+      awaitingChannelResult = false;
+      console.warn("[GPTPS] composer not found");
+      setBadge("GPT-PS RESULT ERR", "error");
       return;
     }
 
@@ -519,18 +753,110 @@
       payload.stderr || "(empty)"
     ].join("\n");
 
+    const attachments = Array.isArray(payload.attachments)
+      ? payload.attachments
+      : [];
+
+    const attachmentErrors = Array.isArray(payload.attachment_errors)
+      ? payload.attachment_errors
+      : [];
+
     setComposerText(composer, body);
 
-    if (await trySubmitResult(composer, body)) {
-      setBadge("GPT↔PS SENT BACK", "ok");
+    if (attachmentErrors.length > 0) {
+      awaitingChannelResult = false;
+      console.error("[GPTPS] GP-ATTACH errors", attachmentErrors);
+      setBadge("GP-ATTACH ERROR", "error");
       return;
     }
 
-    console.warn("[GPTPS] automatic result submission did not complete; result left in composer");
-    setBadge("GPT↔PS RESULT WAIT", "error");
+    if (attachments.length > 0) {
+      try {
+        setBadge("GP-ATTACH UPLOAD", "sending");
+
+        await gpInjectAttachments(
+          attachments,
+          composer,
+          Number(payload.channel || tabChannel)
+        );
+
+        setBadge("GP-ATTACH READY", "ok");
+      } catch (error) {
+        awaitingChannelResult = false;
+        console.error("[GPTPS] GP-ATTACH failed", error);
+        setBadge("GP-ATTACH WAIT", "error");
+        return;
+      }
+    }
+
+    if (await trySubmitResult(composer, body)) {
+      awaitingChannelResult = false;
+      setBadge("GPT-PS SENT BACK", "ok");
+      return;
+    }
+
+    awaitingChannelResult = false;
+    console.warn(
+      "[GPTPS] result left in composer; submission not confirmed"
+    );
+    setBadge("GPT-PS RESULT WAIT", "error");
   }
 
-  chrome.runtime.onMessage.addListener((message) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message?.type === "GPTPS_SET_ENABLED") {
+      if (typeof message.enabled !== "boolean") {
+        sendResponse({ ok: false, error: "Invalid enabled state" });
+        return;
+      }
+
+      setTabEnabled(message.enabled);
+
+      if (!message.enabled && !awaitingChannelResult) {
+        chrome.runtime.sendMessage({
+          type: "GPTPS_TAB_UNBIND_CHANNEL",
+          channel: tabChannel
+        }, () => {
+          void chrome.runtime.lastError;
+        });
+      }
+
+      sendResponse({
+        ok: true,
+        channel: tabChannel,
+        enabled: tabEnabled,
+        pending: awaitingChannelResult
+      });
+      return;
+    }
+
+    if (message?.type === "GPTPS_GET_CHANNEL") {
+      sendResponse({
+        ok: true,
+        channel: tabChannel,
+        enabled: tabEnabled,
+        pending: awaitingChannelResult
+      });
+      return;
+    }
+
+    if (message?.type === "GPTPS_SET_CHANNEL") {
+      sendResponse(setTabChannel(message.channel));
+      return;
+    }
+
+    if (
+      (message?.type === "GPTPS_COMMAND_RESULT" ||
+       message?.type === "GPTPS_BRIDGE_STATUS") &&
+      message?.payload?.channel != null &&
+      Number(message.payload.channel) !== tabChannel
+    ) {
+      console.warn("[GPTPS] rejected result from another channel");
+      return;
+    }
+
+    if (message?.type === "GPTPS_BRIDGE_STATUS") {
+      awaitingChannelResult = false;
+    }
     if (message?.type === "GPTPS_COMMAND_RESULT") {
       submitResult(message.payload);
       return;

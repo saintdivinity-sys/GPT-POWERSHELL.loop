@@ -1,51 +1,190 @@
-html, body {
+
+:root {
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+  color: #eeeaf0;
+  background: #11141a;
+}
+* { box-sizing: border-box; }
+body {
   margin: 0;
-  min-width: 250px;
-  background: #0e1116;
-  color: #e9eef3;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+  min-width: 340px;
+  background:
+    radial-gradient(ellipse at 95% 0%,
+      rgba(169, 111, 90, .16), transparent 54%),
+    linear-gradient(155deg, #1d222a, #101319);
 }
-
-.popup {
-  padding: 14px;
+button { font: inherit; cursor: pointer; }
+.popup { padding: 19px; }
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(220, 196, 178, .11);
 }
-
-.title {
-  font-size: 14px;
-  font-weight: 700;
+.brand { display: flex; align-items: center; gap: 11px; }
+.brandIcon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  font-family: Consolas, monospace;
+  font-weight: 800;
+  color: #f4d8cb;
+  background: linear-gradient(145deg, #705048, #3a394f);
+  border: 1px solid rgba(233, 174, 150, .3);
+  box-shadow: 0 4px 18px rgba(198, 109, 124, .15);
 }
-
-.subtitle {
-  margin-top: 4px;
-  color: #8e9aa7;
-  font-size: 12px;
+h1 { margin: 0; font-size: 14px; letter-spacing: -.025em; }
+.brand p { margin: 3px 0 0; font-size: 11px; color: #9aa0ad; }
+.version {
+  padding: 5px 8px;
+  border: 1px solid #4c4344;
+  border-radius: 8px;
+  font-size: 10px;
+  color: #cbb5a8;
 }
-
-.toggle {
-  width: 100%;
-  margin-top: 14px;
-  padding: 10px 12px;
-  border: 1px solid #3c4c5b;
-  border-radius: 9px;
-  background: #26323d;
-  color: #e9eef3;
-  font: inherit;
+.channelSection { margin-top: 19px; }
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 11px;
+  color: #bba99e;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .13em;
+}
+.connectionIndicator {
+  color: #96a2aa;
+  font-size: 10px;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+.connectionIndicator.online { color: #91dbb4; }
+.channelGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+}
+.channelGrid button {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  min-height: 75px;
+  margin: 0;
+  padding: 13px 4px 10px;
+  border-radius: 12px;
+  color: #c3c8d0;
+  background: #272c35;
+  border: 1px solid #393d47;
+  overflow: hidden;
+  transition: background .2s, border-color .2s, transform .2s;
+}
+.channelGrid button:hover {
+  background: #343843;
+  transform: translateY(-2px);
+}
+.channelGrid button strong {
+  font-size: 19px;
+  font-weight: 710;
+  letter-spacing: -.04em;
+}
+.channelGrid button small {
+  font-size: 9px;
+  color: #939fac;
+}
+.channelGrid button.selected {
+  background: linear-gradient(145deg, #584652, #36364b);
+  border-color: #c69a85;
+  color: #fff0e6;
+  box-shadow: 0 0 17px rgba(213, 141, 116, .2);
+}
+.channelGrid button.selected::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10px;
+  right: 10px;
+  height: 2px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #df937f, #c5a6ff, #83ceee);
+  box-shadow: 0 0 9px #b5a1e3;
+}
+.channelGrid button.offButton.selected {
+  background: #35262c;
+  border-color: #bc6674;
+  color: #ffb6be;
+}
+.channelGrid button.offButton.selected::before {
+  background: linear-gradient(90deg, #a53249, #f37e88);
+}
+.channelStatus {
+  min-height: 30px;
+  padding: 12px 2px 3px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #abb6c2;
+}
+.detailsSection {
+  margin-top: 13px;
+  border: 1px solid rgba(206, 195, 188, .13);
+  border-radius: 13px;
+  overflow: hidden;
+  background: rgba(14, 18, 24, .6);
+}
+.detailRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  font-size: 11px;
+}
+.detailRow:last-child { border: none; }
+.detailLabel { color: #8e9aa7; }
+.detailRow > span:last-child { color: #e1d3cc; text-align: right; }
+.preferences {
+  margin-top: 12px;
+  border: 1px solid #353842;
+  border-radius: 11px;
+}
+.preferences summary {
+  padding: 12px;
+  font-size: 11px;
+  color: #b1a9ad;
   cursor: pointer;
 }
-
-.toggle:hover {
-  background: #31404d;
-}
-
-.toggle.off {
-  border-color: #5b3c43;
-  background: #2b2024;
-  color: #d8b9bf;
-}
-
-.hint {
-  margin: 12px 0 0;
-  color: #8f9aa6;
+.toggle {
+  display: block;
+  width: calc(100% - 20px);
+  margin: 0 10px 10px;
+  padding: 10px;
+  color: #dcd4d8;
+  background: #2a3039;
+  border: 1px solid #464750;
+  border-radius: 9px;
   font-size: 11px;
-  line-height: 1.45;
+}
+.toggle.off { color: #8e97a3; }
+footer {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 21px;
+  color: #848e99;
+  font-size: 9px;
+}
+.footerDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a99c88;
+}
+.footerRight { margin-left: auto; }
+@media (prefers-reduced-motion: reduce) {
+  .channelGrid button { transition: none; }
 }
